@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"\n\n---WORKFLOW---\nFollow this workflow for the user's request:\n1. FIRST: Analyze the task and create a structured plan. Use subagents to explore the codebase where needed.\n2. Use EnterPlanMode to design the implementation approach.\n3. After plan is approved (ExitPlanMode), execute using multiple subagents IN PARALLEL for independent tasks.\n4. Prefer /plan-execute approach: plan first, then concurrent execution.\"",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}

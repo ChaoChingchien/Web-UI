@@ -1,0 +1,239 @@
+.team-view {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 左侧 Team 列表 */
+.team-sidebar {
+  width: 240px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+}
+
+.team-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.team-sidebar-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.btn-add {
+  padding: 4px 10px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.team-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.team-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  margin-bottom: 2px;
+}
+
+.team-item:hover { background: var(--bg-sidebar-hover); }
+.team-item.active { background: var(--bg-sidebar-active); }
+
+.team-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.team-mode {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+/* 右侧内容 */
+.team-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.team-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-tertiary);
+}
+
+.team-empty .empty-icon { font-size: 48px; }
+.team-empty h2 { font-size: 18px; color: var(--text-secondary); }
+
+.team-detail-header { margin-bottom: 20px; }
+.team-detail-header h2 { font-size: 20px; margin-bottom: 4px; }
+.team-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; }
+.team-mode-badge {
+  padding: 2px 8px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 角色 */
+.team-roles { margin-bottom: 24px; }
+.team-roles h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+.role-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.role-chip {
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* 执行区 */
+.team-run-area h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+.run-input-area { display: flex; gap: 12px; margin-bottom: 16px; }
+.run-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  resize: none;
+  font-family: inherit;
+}
+.btn-run {
+  padding: 10px 20px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 日志 */
+.team-logs { margin-bottom: 16px; }
+.log-item { padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--border-light); }
+
+/* 结果 */
+.team-result { margin-top: 16px; }
+.result-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* 弹窗 */
+.team-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.team-modal {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.team-modal h3 { font-size: 18px; margin-bottom: 20px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.role-selector { max-height: 240px; overflow-y: auto; }
+
+.role-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.role-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+}
+
+.input-mapping-select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12px;
+  flex-shrink: 0;
+  max-width: 160px;
+}
+
+.mapping-hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-left: 4px;
+}
+
+.empty-hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.btn-cancel { padding: 8px 20px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); cursor: pointer; }
+.btn-confirm { padding: 8px 20px; background: var(--accent); color: var(--text-on-accent); border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; }
+.btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }

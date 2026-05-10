@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+server/dist/
+client/dist/
+archive/out/
+
+# Vite cache
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Electron build artifact
+Web-AI-win32-x64/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+
+# Screenshots (test artifacts)
+server/screenshots/
+
+# Database
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

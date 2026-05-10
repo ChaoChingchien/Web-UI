@@ -1,0 +1,87 @@
+/* 主布局 */
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+/* 标题栏 */
+.title-bar {
+  height: var(--title-bar-height);
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+.title-bar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  user-select: none;
+  padding-left: 8px;
+}
+
+.title-bar-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.title-bar-spacer {
+  width: 1px;
+  height: 20px;
+  background: var(--border-medium);
+  margin: 0 6px;
+}
+
+.window-btn {
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.window-close:hover {
+  background-color: #e81123 !important;
+  color: #fff;
+}
+
+.title-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast);
+}
+
+.title-btn:hover {
+  background-color: var(--bg-sidebar-hover);
+}
+
+/* 主体 */
+.main-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar 组件样式覆盖 */
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}

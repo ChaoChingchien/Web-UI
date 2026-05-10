@@ -1,0 +1,54 @@
+/* 顶部水平导航 — 自动换行 */
+.left-nav {
+  width: 100%;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px 12px;
+  gap: 2px;
+  flex-shrink: 0;
+  min-height: 48px;
+}
+
+.nav-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  color: var(--text-tertiary);
+}
+.nav-btn:hover {
+  background: var(--bg-sidebar-hover);
+  color: var(--text-secondary);
+}
+.nav-btn.active {
+  background: var(--bg-sidebar-active);
+  color: var(--accent);
+}
+.nav-btn.active::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+.nav-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.5;
+}
