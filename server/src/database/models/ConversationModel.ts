@@ -39,18 +39,18 @@ export class ConversationModel {
     return null;
   }
 
-  static create(providerId: string, title: string): Conversation {
+  static create(providerId: string, title: string, opts?: { agent?: boolean; agentPrompt?: string }): Conversation {
     const db = DatabaseManager.getInstance().getDb();
     const id = uuidv4();
     const now = new Date().toISOString();
 
     db.run(
-      'INSERT INTO conversations (id, provider_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-      [id, providerId, title, now, now]
+      'INSERT INTO conversations (id, provider_id, title, agent_mode, agent_system_prompt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, providerId, title, opts?.agent ? 1 : 0, opts?.agentPrompt || null, now, now]
     );
 
     DatabaseManager.getInstance().save();
-    return { id, provider_id: providerId, title, created_at: now, updated_at: now };
+    return { id, provider_id: providerId, title, agent_mode: opts?.agent, agent_system_prompt: opts?.agentPrompt, created_at: now, updated_at: now };
   }
 
   static delete(id: string): void {
@@ -92,6 +92,8 @@ export class ConversationModel {
   private static rowToConversation(row: Record<string, unknown>): Conversation {
     const webUrl = row.web_url;
     const autoDispatchRaw = row.auto_dispatch;
+    const agentModeRaw = row.agent_mode;
+    const agentPromptRaw = row.agent_system_prompt;
     return {
       id: row.id as string,
       provider_id: row.provider_id as string,
@@ -100,8 +102,38 @@ export class ConversationModel {
       auto_dispatch: autoDispatchRaw === null || autoDispatchRaw === undefined
         ? false
         : Boolean(Number(autoDispatchRaw)),
+      agent_mode: agentModeRaw === null || agentModeRaw === undefined
+        ? false
+        : Boolean(Number(agentModeRaw)),
+      agent_system_prompt: (agentPromptRaw === null || agentPromptRaw === undefined)
+        ? undefined
+        : String(agentPromptRaw),
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
     };
+  }
+
+  /** 切换 Agent 模式下的 provider */
+  static switchProvider(id: string, newProviderId: string): void {
+    const db = DatabaseManager.getInstance().getDb();
+    db.run("UPDATE conversations SET provider_id = ?, updated_at = datetime('now') WHERE id = ?", [newProviderId, id]);
+    DatabaseManager.getInstance().save();
+  }
+
+  /** 设置 Agent 模式 */
+  static setAgentMode(id: string, enabled: boolean, systemPrompt?: string): void {
+    const db = DatabaseManager.getInstance().getDb();
+    if (systemPrompt !== undefined) {
+      db.run(
+        "UPDATE conversations SET agent_mode = ?, agent_system_prompt = ?, updated_at = datetime('now') WHERE id = ?",
+        [enabled ? 1 : 0, systemPrompt, id]
+      );
+    } else {
+      db.run(
+        "UPDATE conversations SET agent_mode = ?, updated_at = datetime('now') WHERE id = ?",
+        [enabled ? 1 : 0, id]
+      );
+    }
+    DatabaseManager.getInstance().save();
   }
 }

@@ -21,7 +21,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system');
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
-  const [accentColor, setAccentColorState] = useState('indigo');
+  const [accentColor, setAccentColorState] = useState('amber');
 
   useEffect(() => {
     window.api.settings.get().then((settings) => {

@@ -110,14 +110,42 @@ export class AIRouter {
 
   // --- Private ---
 
-  private async webChat(
+  private webChat(
     provider: AIProvider,
     messages: ChatMessage[],
     options?: { mode?: string; model?: string; toggles?: Record<string, boolean>; resumeUrl?: string }
   ): Promise<{ response: string; finalUrl: string }> {
+    // 对于 web 自动化：将 system prompt + 上下文 + 用户消息组装成一条完整输入
+    // 因为网页聊天只有一个输入框，无法像 API 那样分别传 role
+    const systemMsgs = messages.filter((m) => m.role === 'system').map((m) => m.content);
+    const historyMsgs = messages.filter((m) => m.role === 'assistant' || m.role === 'user');
     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+
     if (!lastUserMsg) throw new Error('没有用户消息');
-    return this.webAutomation.chat(provider, lastUserMsg.content, options);
+
+    const parts: string[] = [];
+
+    // 系统提示：角色定义 + 任务说明
+    if (systemMsgs.length > 0) {
+      parts.push('【系统指令】\n' + systemMsgs.join('\n\n'));
+    }
+
+    // 上下文：之前的对话
+    if (historyMsgs.length > 1) {
+      const context = historyMsgs
+        .slice(0, -1) // 排除最后一条用户消息（它就是我们要发的）
+        .map((m) => (m.role === 'user' ? '👤 用户' : '🤖 AI') + '：' + m.content)
+        .join('\n\n');
+      if (context) {
+        parts.push('【对话上下文】\n' + context);
+      }
+    }
+
+    // 当前用户消息
+    parts.push('【当前消息】\n' + lastUserMsg.content);
+
+    const combined = parts.join('\n\n---\n\n');
+    return this.webAutomation.chat(provider, combined, options);
   }
 
   private async apiChat(provider: AIProvider, messages: ChatMessage[]): Promise<string> {

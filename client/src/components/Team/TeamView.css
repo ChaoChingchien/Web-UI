@@ -493,140 +493,421 @@
   color: var(--accent);
 }
 
-/* ===== 创建 Team 弹窗 - 角色选择器 ===== */
+/* ===== 创建 Team 弹窗 — v2 网格卡片设计 ===== */
 
-.role-selector {
-  max-height: 360px;
-  overflow-y: auto;
+.ct-modal {
+  width: min(820px, 92vw);
+  max-height: 92vh;
+  padding: 24px 24px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
+  overflow: hidden;
 }
 
-.role-select-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-
-.role-select-item:hover {
-  background: var(--bg-sidebar-hover);
-}
-
-.role-select-item.expanded {
-  background: var(--bg-sidebar-active);
-  border-color: var(--border-light);
-}
-
-.role-select-header {
-  display: flex;
-  align-items: center;
-}
-
-.role-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  flex: 1;
-  font-size: 13px;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.role-checkbox input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
+.ct-title {
   margin: 0;
-  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
 }
 
-.role-select-details {
+.ct-form-row {
   display: flex;
-  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.ct-form-row .form-group {
+  margin-bottom: 0;
+}
+
+/* ===== 已选角色条 ===== */
+
+.ct-selected-bar {
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
-  padding: 8px 12px 4px 22px;
-  border-top: 1px solid var(--border-light);
-  margin-top: 4px;
+  padding: 8px 12px;
+  background: var(--accent-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent);
+  flex-wrap: wrap;
+  min-height: 36px;
 }
 
-.role-detail-label {
-  font-size: 11px;
+.ct-selected-label {
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 4px;
-  display: block;
+  color: var(--accent);
+  white-space: nowrap;
+  padding-top: 3px;
 }
 
-.role-providers-section,
-.role-mapping-section {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.provider-checkboxes {
+.ct-selected-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.provider-checkbox {
-  display: flex;
+.ct-selected-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
+  gap: 3px;
+  padding: 2px 10px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-full);
   font-size: 12px;
-  background: var(--bg-primary);
-  transition: all var(--transition-fast);
+  cursor: pointer;
+  transition: opacity 0.2s;
   user-select: none;
 }
 
-.provider-checkbox:hover {
-  border-color: var(--accent);
-  background: var(--accent-subtle);
+.ct-selected-chip:hover {
+  opacity: 0.8;
 }
 
-.provider-checkbox.checked {
-  border-color: var(--accent);
-  background: var(--accent-subtle);
-  color: var(--accent);
+.ct-chip-remove {
+  font-weight: 700;
+  margin-left: 1px;
 }
 
-.provider-checkbox input[type="checkbox"] {
-  display: none;
+/* ===== 搜索 + 分类 ===== */
+
+.ct-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.provider-checkbox-label {
+.ct-search {
   display: flex;
   align-items: center;
-  gap: 4px;
-  white-space: nowrap;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0 10px;
+  transition: border-color 0.2s;
 }
 
-.provider-checkbox-model {
+.ct-search:focus-within {
+  border-color: var(--accent);
+}
+
+.ct-search-icon {
+  font-size: 14px;
   opacity: 0.5;
-  margin-left: 2px;
-  font-size: 10px;
 }
 
-.input-mapping-select {
-  padding: 4px 8px;
+.ct-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 8px 0;
+  font-family: inherit;
+}
+
+.ct-search-clear {
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 2px;
+}
+
+.ct-categories {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ct-cat-chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.ct-cat-chip:hover {
+  background: var(--bg-sidebar-hover);
+  border-color: var(--border-medium);
+}
+
+.ct-cat-chip.active {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+
+.ct-cat-count {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-left: 1px;
+}
+
+/* ===== 角色网格 ===== */
+
+.ct-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+  max-height: min(280px, 40vh);
+  overflow-y: auto;
+  padding: 2px;
+  align-content: start;
+  flex: 1 1 auto;
+  min-height: 100px;
+}
+
+.ct-role-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ct-role-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ct-role-grid::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 3px;
+}
+
+.ct-role-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-light);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  text-align: center;
+  min-height: 0;
+}
+
+.ct-role-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.ct-role-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.ct-role-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.ct-role-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.ct-role-cat-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.ct-role-check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* 分类卡片左侧色条 */
+.ct-card-dev { border-left-color: #3b82f6; }
+.ct-card-product { border-left-color: #8b5cf6; }
+.ct-card-content { border-left-color: #22c55e; }
+.ct-card-business { border-left-color: #f59e0b; }
+.ct-card-academic { border-left-color: #06b6d4; }
+.ct-card-life { border-left-color: #ec4899; }
+.ct-card-tools { border-left-color: #6b7280; }
+.ct-card-learn { border-left-color: #84cc16; }
+
+/* 分类 tag 颜色 */
+.ct-cat-dev { color: #3b82f6; }
+.ct-cat-product { color: #8b5cf6; }
+.ct-cat-content { color: #22c55e; }
+.ct-cat-business { color: #f59e0b; }
+.ct-cat-academic { color: #06b6d4; }
+.ct-cat-life { color: #ec4899; }
+.ct-cat-tools { color: #6b7280; }
+.ct-cat-learn { color: #84cc16; }
+.ct-cat-custom { color: var(--text-tertiary); }
+
+.ct-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+/* ===== 已选角色详情 ===== */
+
+.ct-details-section {
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.ct-details-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ct-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.ct-detail-row + .ct-detail-row {
+  border-top: 1px solid var(--border-light);
+}
+
+.ct-detail-role-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.ct-detail-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ct-provider-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.ct-provider-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-primary);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.ct-provider-chip:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.ct-provider-chip.active {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+
+.ct-mapping-select {
+  padding: 2px 6px;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
-  max-width: 180px;
+  max-width: 160px;
+  outline: none;
+}
+
+.ct-mapping-select:focus {
+  border-color: var(--accent);
+}
+
+/* ===== 响应式 ===== */
+
+@media (max-width: 640px) {
+  .ct-modal {
+    width: 98vw;
+    padding: 16px;
+    gap: 8px;
+  }
+
+  .ct-role-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 4px;
+  }
+
+  .ct-role-card {
+    padding: 8px 6px;
+  }
+
+  .ct-role-icon {
+    font-size: 20px;
+  }
+
+  .ct-role-name {
+    font-size: 10px;
+  }
+
+  .ct-detail-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (min-width: 900px) {
+  .ct-role-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
 }

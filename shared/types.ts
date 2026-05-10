@@ -110,6 +110,10 @@ export interface Conversation {
   web_url?: string;
   /** 是否开启消息级自动角色调度（由分类器挑选角色） */
   auto_dispatch?: boolean;
+  /** Agent 模式：允许在对话中切换 provider，所有消息共享同一上下文 */
+  agent_mode?: boolean;
+  /** Agent 模式下的系统提示词（Agent 角色定义） */
+  agent_system_prompt?: string;
   created_at: string;
   updated_at: string;
 }
@@ -127,12 +131,31 @@ export interface Message {
   created_at: string;
 }
 
+/** 嵌入服务提供者 */
+export type EmbeddingProvider = 'local' | 'api';
+
+/** 嵌入/语义记忆配置 */
+export interface EmbeddingConfig {
+  /** 是否启用语义记忆 */
+  enabled: boolean;
+  /** 提供者：local（本机 @xenova/transformers）或 api（兼容接口） */
+  provider: EmbeddingProvider;
+  /** API 端点（仅 provider=api 时使用，兼容 OpenAI/Ollama 格式） */
+  apiUrl: string;
+  /** API 模型名（仅 provider=api 时使用） */
+  apiModel: string;
+}
+
 /** 应用设置 */
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   accentColor: string;
   sidebarCollapsed: boolean;
   sidebarWidth: number;
+  /** Web 自动化浏览器是否在后台运行（不弹 GUI 窗口） */
+  headless: boolean;
+  /** 语义记忆（向量嵌入）配置 */
+  embedding: EmbeddingConfig;
 }
 
 // ===== AI Team 类型 =====

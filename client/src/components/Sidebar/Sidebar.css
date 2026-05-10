@@ -126,6 +126,11 @@
   border-left-color: var(--accent);
 }
 
+.conv-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .conv-title {
   display: block;
   font-size: 13px;
@@ -141,6 +146,82 @@
   color: var(--text-tertiary);
   margin-top: 2px;
 }
+
+.btn-sync-msg {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.conversation-item:hover .btn-sync-msg {
+  opacity: 1;
+}
+
+.btn-sync-msg:hover {
+  background: var(--bg-sidebar-hover);
+  color: var(--accent);
+}
+
+/* 多选 */
+.conv-checkbox {
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+.conversation-item:hover .conv-checkbox,
+.conversation-item.multi-selected .conv-checkbox,
+.conv-checkbox.checked {
+  opacity: 1;
+}
+
+.conv-checkbox.checked { color: var(--accent); }
+
+.conversation-item.multi-selected {
+  background: var(--accent-subtle) !important;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-md);
+  margin: 4px 8px;
+  font-size: 12px;
+}
+
+.batch-count {
+  flex: 1;
+  font-weight: 600;
+}
+
+.batch-btn {
+  padding: 3px 10px;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.batch-btn:hover { background: rgba(255,255,255,0.15); }
+.batch-btn-danger:hover { background: var(--danger); border-color: var(--danger); }
 
 .conversation-filter {
   padding: 4px 8px;
@@ -184,6 +265,29 @@
 .btn-filter-search:hover {
   background: var(--accent-subtle);
   border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-sync-all {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.provider-item:hover .btn-sync-all {
+  opacity: 1;
+}
+
+.btn-sync-all:hover {
+  background: var(--bg-sidebar-active);
   color: var(--accent);
 }
 

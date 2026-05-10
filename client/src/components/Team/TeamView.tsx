@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { AITeamWithRoles, AIRole, AIProvider, TeamMode, TeamChatMessageData } from '@shared/types';
 import { useToast } from '../Toast';
-import { CreateTeamDialog } from './CreateTeamDialog';
+import { TeamEditor } from './TeamEditor';
 import './TeamView.css';
+import './TeamEditor.css';
 
 interface PresetTemplate {
   name: string;
@@ -204,10 +205,17 @@ export const TeamView: React.FC = () => {
   const [providers, setProviders] = useState<AIProvider[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editingTeamData, setEditingTeamData] = useState<AITeamWithRoles | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [teamLoading, setTeamLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [filterCategory, setFilterCategory] = useState('all');
+
+  // 右键菜单
+  const [teamContextMenu, setTeamContextMenu] = useState<{ x: number; y: number; teamId: string } | null>(null);
+  const [renameTeamDialog, setRenameTeamDialog] = useState<{ id: string; name: string } | null>(null);
+  const [renameTeamName, setRenameTeamName] = useState('');
 
   // Chat state
   const [messages, setMessages] = useState<TeamChatMessageData[]>([]);
@@ -389,19 +397,97 @@ export const TeamView: React.FC = () => {
     }
   }, [handleSendMessage]);
 
-  const handleDeleteTeam = useCallback(async () => {
-    if (!selectedTeam) return;
+  const handleDeleteTeam = useCallback(async (teamId?: string) => {
+    const targetId = teamId || selectedTeam;
+    if (!targetId) return;
     try {
-      await window.api.team.delete(selectedTeam);
-      setSelectedTeam(null);
+      await window.api.team.delete(targetId);
+      if (targetId === selectedTeam) {
+        setSelectedTeam(null);
+        setMessages([]);
+      }
       setShowDeleteConfirm(false);
-      setMessages([]);
+      setTeamContextMenu(null);
       loadData();
       toast('success', '团队已删除');
     } catch (err) {
       toast('error', '删除团队失败');
     }
   }, [selectedTeam, loadData, toast]);
+
+  // 右键菜单：从侧栏删除
+  const handleContextDelete = useCallback((teamId: string) => {
+    setSelectedTeam(teamId);
+    setShowDeleteConfirm(true);
+  }, []);
+
+  // 重命名
+  const handleRenameTeam = useCallback(async () => {
+    if (!renameTeamDialog || !renameTeamName.trim()) return;
+    try {
+      await window.api.team.update(renameTeamDialog.id, { name: renameTeamName.trim() } as any);
+      setRenameTeamDialog(null);
+      setTeamContextMenu(null);
+      loadData();
+      toast('success', '团队已重命名');
+    } catch {
+      toast('error', '重命名失败');
+    }
+  }, [renameTeamDialog, renameTeamName, loadData, toast]);
+
+  // 打开编辑对话框，预填充当前团队数据
+  const handleOpenEdit = useCallback(() => {
+    if (!selectedTeam) return;
+    const team = teams.find((t) => t.id === selectedTeam) as AITeamWithRoles | undefined;
+    if (!team) return;
+    setEditingTeamData(team);
+    // 预填表单
+    setNewTeam({
+      name: team.name,
+      description: team.description || '',
+      mode: team.mode,
+      roleIds: team.roles?.map((tr) => tr.role_id) || [],
+    });
+    // 预填角色配置
+    const mappings: Record<string, 'original' | 'previous' | 'all_previous'> = {};
+    const rp: Record<string, string[]> = {};
+    for (const tr of team.roles || []) {
+      mappings[tr.role_id] = tr.input_mapping as 'original' | 'previous' | 'all_previous';
+      rp[tr.role_id] = tr.provider_overrides || [];
+    }
+    setRoleInputMappings(mappings);
+    setRoleProviders(rp);
+    setShowEdit(true);
+  }, [selectedTeam, teams, setNewTeam, setRoleInputMappings, setRoleProviders]);
+
+  // 保存编辑
+  const handleUpdateTeam = useCallback(async () => {
+    if (!editingTeamData) return;
+    const roleEntries = newTeam.roleIds.map((roleId, i) => ({
+      roleId,
+      order: i,
+      parallelGroup: newTeam.mode === 'parallel' ? 0 : i,
+      inputMapping: roleInputMappings[roleId] || (newTeam.mode === 'pipeline' ? 'previous' : 'original'),
+      providerIds: roleProviders[roleId] || [],
+    }));
+    try {
+      await window.api.team.update(editingTeamData.id, {
+        name: newTeam.name,
+        description: newTeam.description,
+        mode: newTeam.mode,
+        roleIds: roleEntries,
+      } as any);
+      setShowEdit(false);
+      setEditingTeamData(null);
+      setNewTeam({ name: '', description: '', mode: 'pipeline', roleIds: [] });
+      setRoleInputMappings({});
+      setRoleProviders({});
+      toast('success', '团队已更新');
+      loadData();
+    } catch (err) {
+      toast('error', '更新团队失败');
+    }
+  }, [editingTeamData, newTeam, roleInputMappings, roleProviders, loadData, toast]);
 
   const selectedTeamData = useMemo(
     () => teams.find((t) => t.id === selectedTeam) as AITeamWithRoles | undefined,
@@ -430,7 +516,11 @@ export const TeamView: React.FC = () => {
             <div
               key={team.id}
               className={`team-item ${selectedTeam === team.id ? 'active' : ''}`}
-              onClick={() => setSelectedTeam(team.id)}
+              onClick={() => { setSelectedTeam(team.id); setTeamContextMenu(null); }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setTeamContextMenu({ x: e.clientX, y: e.clientY, teamId: team.id });
+              }}
             >
               <span className="team-name">{team.name}</span>
               <span className={`team-mode mode-${team.mode}`}>{team.mode}</span>
@@ -441,7 +531,29 @@ export const TeamView: React.FC = () => {
       </div>
 
       <div className="team-content">
-        {!selectedTeamData ? (
+        {/* 编辑器优先于常规视图 */}
+        {(showCreate || showEdit) ? (
+          <TeamEditor
+            roles={roles}
+            providers={providers}
+            teamData={newTeam}
+            setTeamData={setNewTeam}
+            roleProviders={roleProviders}
+            setRoleProviders={setRoleProviders}
+            roleInputMappings={roleInputMappings}
+            setRoleInputMappings={setRoleInputMappings}
+            onSave={showEdit ? handleUpdateTeam : handleCreateTeam}
+            onCancel={() => {
+              setShowCreate(false);
+              setShowEdit(false);
+              setEditingTeamData(null);
+              setNewTeam({ name: '', description: '', mode: 'pipeline', roleIds: [] });
+              setRoleInputMappings({});
+              setRoleProviders({});
+            }}
+            editing={showEdit && !!editingTeamData}
+          />
+        ) : !selectedTeamData ? (
           <div className="team-empty">
             <h2>选择一个 AI Team</h2>
             <p>或从预设模板一键创建</p>
@@ -493,7 +605,10 @@ export const TeamView: React.FC = () => {
                 <span className={`team-mode-badge mode-${selectedTeamData.mode}`}>{selectedTeamData.mode}</span>
                 <span className="team-member-count">{selectedTeamData.roles?.length || 0} 个角色</span>
               </div>
-              <button className="btn btn-danger btn-sm" onClick={() => setShowDeleteConfirm(true)}>删除</button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="btn btn-outline btn-sm" onClick={handleOpenEdit}>编辑</button>
+                <button className="btn btn-danger btn-sm" onClick={() => setShowDeleteConfirm(true)}>删除</button>
+              </div>
             </div>
 
             {/* 角色成员提示条 */}
@@ -571,19 +686,64 @@ export const TeamView: React.FC = () => {
         )}
       </div>
 
-      {showCreate && (
-        <CreateTeamDialog
-          roles={roles}
-          providers={providers}
-          newTeam={newTeam}
-          setNewTeam={setNewTeam}
-          roleProviders={roleProviders}
-          setRoleProviders={setRoleProviders}
-          roleInputMappings={roleInputMappings}
-          setRoleInputMappings={setRoleInputMappings}
-          onSave={handleCreateTeam}
-          onClose={() => setShowCreate(false)}
-        />
+      {/* 右键菜单 */}
+      {teamContextMenu && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 999 }}
+            onClick={() => setTeamContextMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setTeamContextMenu(null); }}
+          />
+          <div
+            className="context-menu"
+            style={{ left: teamContextMenu.x, top: teamContextMenu.y, zIndex: 1000 }}
+          >
+            <div className="context-menu-item" onClick={() => {
+              const team = teams.find((t) => t.id === teamContextMenu.teamId);
+              if (team) {
+                setRenameTeamDialog({ id: team.id, name: team.name });
+                setRenameTeamName(team.name);
+              }
+              setTeamContextMenu(null);
+            }}>✏️ 重命名</div>
+            <div className="context-menu-item" onClick={() => {
+              const team = teams.find((t) => t.id === teamContextMenu.teamId);
+              if (team) {
+                setSelectedTeam(team.id);
+                handleOpenEdit();
+              }
+              setTeamContextMenu(null);
+            }}>⚙️ 编辑</div>
+            <div className="context-menu-item danger" onClick={() => {
+              handleContextDelete(teamContextMenu.teamId);
+            }}>🗑️ 删除</div>
+          </div>
+        </>
+      )}
+
+      {/* 重命名弹窗 */}
+      {renameTeamDialog && (
+        <div className="modal-overlay" onClick={() => setRenameTeamDialog(null)}>
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}
+            tabIndex={-1}
+            onKeyDown={(e) => { if (e.key === 'Escape') setRenameTeamDialog(null); }}
+          >
+            <h3>重命名团队</h3>
+            <div className="form-group">
+              <input
+                autoFocus
+                value={renameTeamName}
+                onChange={(e) => setRenameTeamName(e.target.value)}
+                placeholder="输入新名称"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleRenameTeam(); }}
+              />
+            </div>
+            <div className="form-actions">
+              <button className="btn-cancel" onClick={() => setRenameTeamDialog(null)}>取消</button>
+              <button className="btn-confirm" onClick={handleRenameTeam}>保存</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showDeleteConfirm && (
@@ -601,7 +761,7 @@ export const TeamView: React.FC = () => {
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="btn" onClick={() => setShowDeleteConfirm(false)}>取消</button>
-              <button className="btn btn-danger" onClick={handleDeleteTeam}>删除</button>
+              <button className="btn btn-danger" onClick={() => handleDeleteTeam()}>删除</button>
             </div>
           </div>
         </div>

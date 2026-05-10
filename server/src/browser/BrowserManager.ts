@@ -2,7 +2,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import path from 'path';
 import fs from 'fs';
 import http from 'http';
-import { log, getBrowserDataPath } from '../platform';
+import { log, getBrowserDataPath, getSettingsPath } from '../platform';
 import type { AIProvider } from '@shared/types';
 
 /** ============================================
@@ -88,6 +88,19 @@ export class BrowserManager {
     return BrowserManager.instance;
   }
 
+  /** 读取用户设置中是否启用 headless 模式（后台运行，不弹 GUI 窗口） */
+  private isHeadless(): boolean {
+    try {
+      const settingsPath = getSettingsPath();
+      if (fs.existsSync(settingsPath)) {
+        const raw = fs.readFileSync(settingsPath, 'utf-8');
+        const settings = JSON.parse(raw);
+        return settings.headless === true;
+      }
+    } catch { /* 读取失败则不启用 headless */ }
+    return false;
+  }
+
   /** 启动浏览器 */
   async launch(): Promise<void> {
     if (this.browser && this.browser.isConnected()) return;
@@ -119,8 +132,9 @@ export class BrowserManager {
     // 策略 2: 启动本机 Chrome（持久化用户数据）
     // 使用 launchPersistentContext 替代 launch，避免 --user-data-dir 参数冲突
     const chromePath = findChromeExecutable();
+    const isHeadless = this.isHeadless();
     const launchOpts: Parameters<typeof chromium.launchPersistentContext>[1] = {
-      headless: false,
+      headless: isHeadless,
       args: [
         '--disable-blink-features=AutomationControlled',
         '--no-sandbox',
@@ -128,7 +142,15 @@ export class BrowserManager {
         '--disable-dev-shm-usage',
         '--no-first-run',
         '--disable-default-apps',
+        ...(isHeadless ? [
+          '--window-size=1920,1080',
+        ] : []),
       ],
+      // Headless 时伪装真实浏览器环境
+      ...(isHeadless ? {
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        viewport: { width: 1920, height: 1080 },
+      } : {}),
     };
 
     if (chromePath) {
@@ -186,14 +208,23 @@ export class BrowserManager {
         await cached.page.goto(provider.url!, { waitUntil: 'load', timeout: 60000 });
         return cached.page;
       } catch (err) {
-        log.warn(`[${provider.name}] 重新导航失败:`, err);
+        log.warn(`[${provider.name}] 重新导航失败，继续使用当前页面:`, err);
+        return cached.page;
       }
-      this.pages.delete(provider.id);
     }
 
     // 在持久化/CDP 上下文中创建新页面
     const page = await this.context.newPage();
     page.setDefaultTimeout(60000);
+
+    // Headless 反检测：覆盖 navigator.webdriver
+    if (this.isHeadless()) {
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        // @ts-ignore
+        window.chrome = { runtime: {} };
+      });
+    }
 
     if (provider.url) {
       await this.navigateWithRetry(page, provider);
@@ -262,10 +293,14 @@ export class BrowserManager {
 
   private setupDisconnectHandler(): void {
     this.browser?.on('disconnected', () => {
-      log.warn('浏览器连接断开');
-      this.pages.clear();
+      log.warn('浏览器连接断开 — 将尝试自动重连');
+      // 不清空 pages 缓存：重连后可以恢复页面
       this.context = null;
       this.browser = null;
+      // 异步自动重连
+      setTimeout(() => {
+        this.launch().catch((err) => log.warn('自动重连失败:', err));
+      }, 2000);
     });
   }
 

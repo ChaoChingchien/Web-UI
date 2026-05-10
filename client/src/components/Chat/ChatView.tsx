@@ -52,6 +52,11 @@ function resolveProviderAndMessage(
     }
     return { providerId: defaultProviderId, message: raw };
   }
+  // 若用户手动选的 provider 也匹配当前 tier，优先用它
+  const userPick = matching.find((p) => p.id === defaultProviderId);
+  if (userPick) {
+    return { providerId: userPick.id, message: raw };
+  }
   matching.sort((a, b) => {
     const ca = costOrder[((a as any).capabilities?.cost_tier as 'low' | 'medium' | 'high') ?? 'medium'];
     const cb = costOrder[((b as any).capabilities?.cost_tier as 'low' | 'medium' | 'high') ?? 'medium'];
@@ -173,7 +178,37 @@ export const ChatView: React.FC = () => {
     <div className="chat-view">
       <div className="chat-header">
         <div className="chat-title">{activeConversation?.title || '对话'}</div>
-        <div className="chat-actions">
+        <div className="chat-actions" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {activeConversation?.agent_mode && (
+            <select
+              className="toolbar-btn"
+              value={activeProviderId || ''}
+              onChange={(e) => {
+                const newProviderId = e.target.value;
+                if (newProviderId && activeConversationId) {
+                  window.api.conversation.switchProvider(activeConversationId, newProviderId);
+                  useProviderStore.getState().setActiveProvider(newProviderId);
+                  toast('info', `已切换到 ${providers.find(p => p.id === newProviderId)?.name || newProviderId}`);
+                }
+              }}
+              style={{ fontSize: 12, padding: '4px 8px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)', color: 'var(--text-primary)', cursor: 'pointer' }}
+              title="切换 AI 提供商"
+            >
+              {providers.filter(p => p.is_enabled).map(p => (
+                <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
+              ))}
+            </select>
+          )}
+          {activeProvider?.type === 'web' && (
+            <button className="btn btn-sm btn-outline" onClick={async () => {
+              if (!activeConversationId) return;
+              const r = await window.api.conversation.sync(activeConversationId);
+              toast('success', `同步完成：导入了 ${r.imported} 条消息`);
+              useConversationStore.getState().setActiveConversation(activeConversationId);
+            }} title="同步网页对话">
+              同步
+            </button>
+          )}
           <button className="btn btn-sm" onClick={() => setShowExport(true)} title="导出对话">
             导出
           </button>

@@ -138,6 +138,97 @@ export class MessageModel {
     };
   }
 
+  /** 存储消息嵌入向量（为 JSON 字符串） */
+  static setEmbedding(id: string, vector: Float32Array): void {
+    const db = DatabaseManager.getInstance().getDb();
+    const json = JSON.stringify(Array.from(vector));
+    db.run('UPDATE messages SET embedding = ? WHERE id = ?', [json, id]);
+    DatabaseManager.getInstance().save();
+  }
+
+  /** 读取消息嵌入向量 */
+  static getEmbedding(id: string): Float32Array | null {
+    const db = DatabaseManager.getInstance().getDb();
+    const stmt = db.prepare('SELECT embedding FROM messages WHERE id = ?');
+    stmt.bind([id]);
+    let result: Float32Array | null = null;
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as { embedding: string | null };
+      if (row.embedding) {
+        try {
+          const arr = JSON.parse(row.embedding) as number[];
+          result = new Float32Array(arr);
+        } catch { /* corrupted */ }
+      }
+    }
+    stmt.free();
+    return result;
+  }
+
+  /** 语义相似搜索：查找与查询向量最相似的消息（返回消息列表 + 相似度分数） */
+  static searchSimilar(
+    queryVector: Float32Array,
+    topK: number = 10,
+    minSimilarity: number = 0.3,
+  ): Array<{ message: Message; similarity: number }> {
+    const db = DatabaseManager.getInstance().getDb();
+    const stmt = db.prepare('SELECT id, embedding FROM messages WHERE embedding IS NOT NULL');
+
+    const candidates: Array<{ message: Message; similarity: number }> = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject() as { id: string; embedding: string };
+      try {
+        const stored = JSON.parse(row.embedding) as number[];
+        if (stored.length !== queryVector.length) continue;
+        const storedVec = new Float32Array(stored);
+
+        // 余弦相似度
+        let dot = 0, na = 0, nb = 0;
+        for (let i = 0; i < storedVec.length; i++) {
+          dot += storedVec[i] * queryVector[i];
+          na += storedVec[i] * storedVec[i];
+          nb += queryVector[i] * queryVector[i];
+        }
+        const sim = na > 0 && nb > 0 ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
+
+        if (sim >= minSimilarity) {
+          candidates.push({ message: MessageModel.fetchMessageWithTitle(db, row.id)!, similarity: sim });
+        }
+      } catch { /* skip corrupted */ }
+    }
+    stmt.free();
+
+    candidates.sort((a, b) => b.similarity - a.similarity);
+    return candidates.slice(0, topK);
+  }
+
+  /** 获取所有已有嵌入的消息 ID 列表 */
+  static getEmbeddedCount(): number {
+    const db = DatabaseManager.getInstance().getDb();
+    const stmt = db.prepare('SELECT COUNT(*) as cnt FROM messages WHERE embedding IS NOT NULL');
+    let count = 0;
+    if (stmt.step()) {
+      count = (stmt.getAsObject() as { cnt: number }).cnt;
+    }
+    stmt.free();
+    return count;
+  }
+
+  /** 获取所有未生成嵌入的消息（用于批量补全） */
+  static getUnembedded(limit: number = 50): Message[] {
+    const db = DatabaseManager.getInstance().getDb();
+    const stmt = db.prepare(
+      'SELECT * FROM messages WHERE embedding IS NULL AND content != \'\' ORDER BY created_at DESC LIMIT ?'
+    );
+    stmt.bind([limit]);
+    const results: Message[] = [];
+    while (stmt.step()) {
+      results.push(MessageModel.rowToMessage(stmt.getAsObject()));
+    }
+    stmt.free();
+    return results;
+  }
+
   /** 把 DB 行映射为 Message 对象，规范化可选字段 */
   private static rowToMessage(row: Record<string, unknown>): Message {
     const dispatchedRoleId = row.dispatched_role_id;

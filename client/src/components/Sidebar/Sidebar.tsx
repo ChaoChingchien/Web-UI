@@ -52,6 +52,7 @@ export const Sidebar: React.FC = () => {
 
   const [showSearch, setShowSearch] = useState(false);
   const [filterText, setFilterText] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // 右键菜单状态
@@ -70,7 +71,40 @@ export const Sidebar: React.FC = () => {
 
   const handleConversationClick = async (convId: string) => {
     if (contextMenu) return;
+    if (selectedIds.size > 0) {
+      // 多选模式下点击切换选择
+      toggleSelect(convId);
+      return;
+    }
     await setActiveConversation(convId);
+  };
+
+  const toggleSelect = (convId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(convId)) next.delete(convId); else next.add(convId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const filtered = conversations.filter((c) => !filterText.trim() || c.title.toLowerCase().includes(filterText.trim().toLowerCase()));
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((c) => c.id)));
+    }
+  };
+
+  const batchDelete = async () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    let ok = 0;
+    for (const id of selectedIds) {
+      try { await deleteConversation(id); ok++; } catch { /* skip */ }
+    }
+    setSelectedIds(new Set());
+    toast('success', `已删除 ${ok} 个对话`);
   };
 
   const handleContextMenu = (e: React.MouseEvent, convId: string, title: string) => {
@@ -124,6 +158,22 @@ export const Sidebar: React.FC = () => {
           >
             <span className="provider-icon">{provider.icon}</span>
             <span className="provider-name">{provider.name}</span>
+            {provider.type === 'web' && (
+              <button
+                className="btn-sync-all"
+                title="同步网页对话列表"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const r = await window.api.provider.syncConversations(provider.id);
+                    toast('success', `已导入 ${r.imported} 个对话`);
+                    loadConversations(provider.id);
+                  } catch { toast('error', '同步失败'); }
+                }}
+              >
+                ↻
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -132,9 +182,10 @@ export const Sidebar: React.FC = () => {
       <div className="conversation-list">
         <div className="section-header">
           <div className="section-title">对话</div>
-          <button className="btn-new" onClick={handleNewConversation} title="新建对话">
-            +
-          </button>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button className="btn-new" onClick={toggleSelectAll} title="全选">☐</button>
+            <button className="btn-new" onClick={handleNewConversation} title="新建对话">+</button>
+          </div>
         </div>
         <div className="conversation-filter">
           <input
@@ -158,19 +209,56 @@ export const Sidebar: React.FC = () => {
             </button>
           )}
         </div>
+        {/* 批量操作栏 */}
+        {selectedIds.size > 0 && (
+          <div className="batch-bar">
+            <span className="batch-count">已选 {selectedIds.size} 个</span>
+            <button className="batch-btn batch-btn-danger" onClick={batchDelete}>🗑️ 删除</button>
+            <button className="batch-btn" onClick={() => setSelectedIds(new Set())}>取消</button>
+          </div>
+        )}
+
         {conversations
           .filter((conv) => !filterText.trim() || conv.title.toLowerCase().includes(filterText.trim().toLowerCase()))
-          .map((conv) => (
+          .map((conv) => {
+            const isSelected = selectedIds.has(conv.id);
+            return (
           <div
             key={conv.id}
-            className={`conversation-item ${activeConversationId === conv.id ? 'active' : ''}`}
+            className={`conversation-item ${activeConversationId === conv.id ? 'active' : ''} ${isSelected ? 'multi-selected' : ''}`}
             onClick={() => handleConversationClick(conv.id)}
             onContextMenu={(e) => handleContextMenu(e, conv.id, conv.title)}
           >
-            <span className="conv-title">{conv.title}</span>
-            <span className="conv-time">{new Date(conv.updated_at).toLocaleDateString()}</span>
+            <span className={`conv-checkbox ${isSelected ? 'checked' : ''}`} onClick={(e) => {
+              e.stopPropagation();
+              toggleSelect(conv.id);
+            }}>{
+              isSelected ? '☑' : '☐'
+            }</span>
+            <span className="conv-info">
+              <span className="conv-title">{conv.title}</span>
+              <span className="conv-time">{new Date(conv.updated_at).toLocaleDateString()}</span>
+            </span>
+            {conv.web_url && (
+              <button
+                className="btn-sync-msg"
+                title="同步网页消息"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const r = await window.api.conversation.sync(conv.id);
+                    toast('success', `导入了 ${r.imported} 条消息`);
+                    if (conv.id === activeConversationId) {
+                      setActiveConversation(conv.id);
+                    }
+                  } catch { toast('error', '同步失败'); }
+                }}
+              >
+                ↻
+              </button>
+            )}
           </div>
-        ))}
+        )})}
         {conversations.length === 0 && (
           <div className="empty-state">暂无对话</div>
         )}

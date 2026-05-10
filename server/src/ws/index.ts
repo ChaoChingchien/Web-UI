@@ -111,11 +111,15 @@ async function handleChatSend(ws: WebSocket, data: { providerId: string; convers
       role: m.role as 'system' | 'user' | 'assistant',
       content: m.content,
     }));
-    const messages = effectiveSystemPrompt
-      ? [
-          { role: 'system' as const, content: effectiveSystemPrompt },
-          ...historyMessages,
-        ]
+
+    // Agent 模式：注入 agent 系统提示词
+    let systemPrompt = effectiveSystemPrompt;
+    if (conversation.agent_mode && conversation.agent_system_prompt) {
+      systemPrompt = conversation.agent_system_prompt;
+    }
+
+    const messages = systemPrompt
+      ? [{ role: 'system' as const, content: systemPrompt }, ...historyMessages]
       : historyMessages;
 
     // 3. 流式调用 AI
@@ -147,6 +151,19 @@ async function handleChatSend(ws: WebSocket, data: { providerId: string; convers
         if (meta?.finalUrl && provider.type === 'web' && meta.finalUrl !== knownWebUrl) {
           try { ConversationModel.updateWebUrl(conversationId, meta.finalUrl); }
           catch (err) { log.warn(`[chat] 更新 web_url 失败:`, err); }
+        }
+        // Web provider: 发送后自动同步网页消息（非阻塞）
+        if (provider.type === 'web') {
+          (async () => {
+            try {
+              const { WebAutomation } = await import('../ai/WebAutomation');
+              const wa = new WebAutomation();
+              const result = await wa.syncConversation(provider, conversationId, { MessageModel });
+              if (result.imported > 0) log.info(`[chat] 发送后自动同步了 ${result.imported} 条消息`);
+            } catch (err) {
+              log.warn('[chat] 发送后自动同步失败:', err);
+            }
+          })();
         }
         autoNameConversation(conversationId, message);
         sendWsMessage(ws, 'chat:complete', {
@@ -205,10 +222,10 @@ async function handleTeamChatSend(ws: WebSocket, data: { teamId: string; message
 
     // 并行模式：所有角色同时执行
     if (team.mode === 'parallel') {
-      await runTeamChatParallel(ws, teamId, message, sortedRoles);
+      await runTeamChatParallel(ws, teamId, message, sortedRoles, team.name, team.description, team.mode);
     } else {
       // pipeline / debate / mixed：按顺序执行
-      await runTeamChatSequential(ws, teamId, message, sortedRoles, team.mode);
+      await runTeamChatSequential(ws, teamId, message, sortedRoles, team.mode, team.name, team.description);
     }
 
     broadcast('team:chat:turn:complete', { teamId });
@@ -224,10 +241,11 @@ async function handleTeamChatSend(ws: WebSocket, data: { teamId: string; message
 /** 并行执行所有角色 */
 async function runTeamChatParallel(
   ws: WebSocket, teamId: string, userMessage: string,
-  roles: { role: { id: string; name: string; icon: string; system_prompt: string; provider_id: string; config: { temperature: number; max_tokens: number } }; provider_overrides?: string[]; conversation_id?: string }[]
+  roles: { role: { id: string; name: string; icon: string; system_prompt: string; provider_id: string; config: { temperature: number; max_tokens: number } }; provider_overrides?: string[]; conversation_id?: string }[],
+  teamName: string, teamDesc: string, teamMode: string
 ): Promise<void> {
   await Promise.all(roles.map((tr) =>
-    executeTeamChatRole(ws, teamId, tr, userMessage)
+    executeTeamChatRole(ws, teamId, tr, userMessage, { teamName, teamDesc, teamMode, roleCount: roles.length })
   ));
 }
 
@@ -235,7 +253,8 @@ async function runTeamChatParallel(
 async function runTeamChatSequential(
   ws: WebSocket, teamId: string, userMessage: string,
   roles: { role: { id: string; name: string; icon: string; system_prompt: string; provider_id: string; config: { temperature: number; max_tokens: number } }; provider_overrides?: string[]; conversation_id?: string }[],
-  mode: string
+  mode: string,
+  teamName: string, teamDesc: string
 ): Promise<void> {
   const allOutputs: { roleName: string; content: string }[] = [];
   for (const tr of roles) {
@@ -246,7 +265,7 @@ async function runTeamChatSequential(
       input = `用户消息: ${userMessage}\n\n之前的回复:\n${context}`;
     }
 
-    const output = await executeTeamChatRole(ws, teamId, tr, input);
+    const output = await executeTeamChatRole(ws, teamId, tr, input, { teamName, teamDesc, teamMode: mode, roleCount: roles.length });
     allOutputs.push({ roleName: tr.role.name, content: output });
   }
 }
@@ -255,7 +274,8 @@ async function runTeamChatSequential(
 async function executeTeamChatRole(
   ws: WebSocket, teamId: string,
   teamRole: { role: { id: string; name: string; icon: string; system_prompt: string; provider_id: string; config: { temperature: number; max_tokens: number } }; provider_overrides?: string[]; conversation_id?: string },
-  input: string
+  input: string,
+  teamCtx?: { teamName: string; teamDesc: string; teamMode: string; roleCount: number }
 ): Promise<string> {
   const role = teamRole.role;
   // 优先使用 team_role 的 provider_overrides 第一个，其次使用角色默认的 provider_id
@@ -299,14 +319,40 @@ async function executeTeamChatRole(
     }
   }
 
+  // 构建增强的系统提示：角色定义 + 团队上下文
+  const teamContextParts: string[] = [];
+  if (teamCtx) {
+    const modeDesc: Record<string, string> = {
+      pipeline: `Pipeline（流水线）：你在一个多人流水线中工作，前面的人完成他们的任务后，输出会传递给你。请基于前人的工作继续推进。`,
+      parallel: `Parallel（并行）：你和其他成员同时独立工作，各自给出自己的答案。`,
+      debate: `Debate（辩论）：你和其他成员将各自发表观点，互相讨论。请保持你的角色立场，积极表达。`,
+      mixed: `Mixed（混合）：自定义协作模式。`,
+    };
+    teamContextParts.push(`你正在一个名为「${teamCtx.teamName}」的 AI 团队中协作。`);
+    if (teamCtx.teamDesc) teamContextParts.push(`团队描述：${teamCtx.teamDesc}`);
+    teamContextParts.push(`协作模式：${modeDesc[teamCtx.teamMode] || teamCtx.teamMode}`);
+    teamContextParts.push(`你在这个团队中的角色是：${role.name}（${role.icon}）。`);
+  }
+  const teamContext = teamContextParts.length > 0 ? '\n\n' + teamContextParts.join('\n') : '';
+
+  const enhancedSystemPrompt = role.system_prompt + teamContext;
+
   const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
-    { role: 'system', content: role.system_prompt },
+    { role: 'system', content: enhancedSystemPrompt },
     ...history,
     { role: 'user', content: input },
   ];
 
   let fullContent = '';
   const msgId = msg.id;
+
+  // 安全超时：180 秒后强制结束，防止 UI 永久卡在「正在输入」
+  const safetyTimer = setTimeout(() => {
+    if (fullContent.length === 0) {
+      TeamChatModel.update(msgId, { content: '\u23F0 \u8BF7\u6C42\u8D85\u65F6\uFF0C\u672A\u6536\u5230\u56DE\u590D', status: 'error' });
+    }
+    broadcast('team:chat:done', { messageId: msgId, teamId, roleId: role.id, roleName: role.name, content: fullContent || '\u23F0 \u8BF7\u6C42\u8D85\u65F6' });
+  }, 180_000);
 
   return new Promise<string>((resolve) => {
     aiRouter.chatStream(
@@ -316,10 +362,12 @@ async function executeTeamChatRole(
       // onChunk — 广播每个块
       (chunk: string) => {
         fullContent += chunk;
+        clearTimeout(safetyTimer);
         broadcast('team:chat:chunk', { messageId: msgId, teamId, roleId: role.id, roleName: role.name, chunk });
       },
       // onDone — 标记完成
       (meta) => {
+        clearTimeout(safetyTimer);
         TeamChatModel.update(msgId, { content: fullContent, status: 'done' });
         // 持久化助手回复到固定对话
         if (conversationId) {
@@ -339,6 +387,7 @@ async function executeTeamChatRole(
       },
       // onError
       (err: Error) => {
+        clearTimeout(safetyTimer);
         TeamChatModel.update(msgId, { content: fullContent || `错误: ${err.message}`, status: 'error' });
         // 即使出错，也把已生成的内容保存到固定对话（保持上下文连贯）
         if (conversationId && fullContent) {

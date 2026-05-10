@@ -95,6 +95,170 @@ export class AutomationEngine {
     return { response, finalUrl };
   }
 
+  // ==================== 全量消息抓取（用于同步） ====================
+
+  /** 抓取网页上已有的所有对话消息（用户 + AI），按顺序返回 */
+  async scrapeConversationMessages(): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
+    await this.waitForPageReady();
+    const result: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+    try {
+      // 通用抓取：找到页面中所有看起来像聊天气泡的 DOM 元素
+      const messages = await this.page.evaluate(() => {
+        const items: Array<{ role: string; text: string }> = [];
+
+        // 策略 A: 找所有带 data-message-author-role 的元素 (ChatGPT)
+        const authorRoles = document.querySelectorAll('[data-message-author-role]');
+        for (const el of authorRoles) {
+          const role = el.getAttribute('data-message-author-role');
+          const text = (el as HTMLElement).innerText?.trim();
+          if (text && text.length > 0 && (role === 'user' || role === 'assistant')) {
+            items.push({ role, text });
+          }
+        }
+        if (items.length > 0) return items;
+
+        // 策略 B: 找所有带 role 属性的消息容器
+        const roleDivs = document.querySelectorAll('[role="assistant"], [role="user"], [class*="user-message"], [class*="assistant-message"], [class*="message-user"], [class*="message-assistant"]');
+        for (const el of roleDivs) {
+          const cls = el.className?.toString().toLowerCase() || '';
+          const roleAttr = el.getAttribute('role');
+          const role = cls.includes('user') || roleAttr === 'user' ? 'user' :
+                       cls.includes('assistant') || roleAttr === 'assistant' ? 'assistant' : null;
+          if (!role) continue;
+          const text = (el as HTMLElement).innerText?.trim();
+          if (text && text.length > 0) {
+            items.push({ role, text });
+          }
+        }
+        if (items.length > 0) return items;
+
+        // 策略 C: 找所有对话容器中的子元素，按顺序推断角色
+        const container = document.querySelector('[class*="chat"] main, [class*="conversation"] main, main [class*="message"], [class*="chat-list"]');
+        const root = container || document.querySelector('main') || document.body;
+        const children = root.querySelectorAll('[class*="message"], [class*="bubble"], [class*="turn"], [class*="response"], .markdown, [data-message-author-role]');
+        let altUser = true;
+        for (const child of children) {
+          const text = (child as HTMLElement).innerText?.trim();
+          if (!text || text.length < 2) continue;
+          const cls = child.className?.toString().toLowerCase() || '';
+          if (cls.includes('send') || cls.includes('input') || cls.includes('textarea')) continue;
+          items.push({ role: altUser ? 'user' : 'assistant', text });
+          altUser = !altUser;
+        }
+
+        return items;
+      });
+
+      for (const m of messages) {
+        if (m.text && m.text.length > 2) {
+          result.push({ role: m.role as 'user' | 'assistant', content: String(m.text) });
+        }
+      }
+      log.info(`[${this.provider.name}] 抓取到 ${result.length} 条网页消息`);
+    } catch (err) {
+      log.warn(`[${this.provider.name}] 抓取网页消息失败:`, err);
+    }
+    return result;
+  }
+
+  // ==================== 对话列表抓取（用于全量同步） ====================
+
+  /** 抓取网页侧栏中的对话列表，返回 { title, url } 数组 */
+  async scrapeConversationList(): Promise<Array<{ title: string; url: string }>> {
+    await this.waitForPageReady();
+    try {
+      const items = await this.page.evaluate(() => {
+        const results: Array<{ title: string; url: string }> = [];
+        // 查找侧栏中所有看起来像对话链接的元素
+        const sidebar = document.querySelector('nav, [class*="sidebar"], [class*="history"], [class*="side"]');
+        const root = sidebar || document.body;
+        const links = root.querySelectorAll('a[href]');
+        const seen = new Set<string>();
+
+        // 排除导航按钮的文本
+        const navWords = ['new chat', 'new conversation', 'settings', 'logout', 'upgrade',
+          '新对话', '设置', '登出', '升级', '探索', '探索 gpt', 'explore',
+          'chatgpt', 'gpt-4', 'gpt-4o', 'more', '更多', 'archived', '已归档',
+          'profile', '账户', 'help', '帮助', 'search', '搜索'];
+
+        for (const link of links) {
+          const rawText = (link as HTMLElement).innerText?.trim() || '';
+          const text = rawText.replace(/\s+/g, ' ');
+
+          // 过滤：太短、太长、导航文本
+          if (text.length < 2 || text.length > 120) continue;
+          const textLower = text.toLowerCase();
+          if (navWords.some((w) => textLower === w || textLower.startsWith(w + ' '))) continue;
+
+          const href = (link as HTMLAnchorElement).href;
+          if (!href.startsWith('http')) continue;
+
+          // URL 标准化：去掉 query 和 hash 做去重
+          let normalizedUrl: string;
+          try {
+            const u = new URL(href);
+            normalizedUrl = u.origin + u.pathname.replace(/\/$/, '');
+          } catch { normalizedUrl = href; }
+
+          if (!seen.has(normalizedUrl)) {
+            seen.add(normalizedUrl);
+            results.push({ title: text, url: href });
+          }
+        }
+        return results.slice(0, 100);
+      });
+      log.info(`[${this.provider.name}] 抓取到 ${items.length} 个网页对话`);
+      return items;
+    } catch (err) {
+      log.warn(`[${this.provider.name}] 抓取对话列表失败:`, err);
+      return [];
+    }
+  }
+
+  /** 在网页端删除当前对话 */
+  async deleteCurrentConversation(): Promise<boolean> {
+    await this.waitForPageReady();
+    try {
+      // 查找删除按钮：菜单中的 Delete / 删除 / Remove 等
+      const clicked = await this.page.evaluate(() => {
+        const allElements = document.querySelectorAll('button, [role="button"], [role="menuitem"], a, div[role="option"]');
+        for (const el of allElements) {
+          const text = (el as HTMLElement).innerText?.trim().toLowerCase();
+          const aria = (el as HTMLElement).getAttribute('aria-label')?.toLowerCase() || '';
+          if (text === 'delete' || text === '删除' || aria.includes('delete') || aria.includes('删除') ||
+              text === 'remove' || text === '移除' || text === 'delete chat' || text === '删除对话') {
+            (el as HTMLElement).click();
+            return true;
+          }
+        }
+        return false;
+      });
+      if (!clicked) return false;
+      await this.page.waitForTimeout(1000);
+
+      // 若有确认弹窗，点击确认
+      const confirmed = await this.page.evaluate(() => {
+        const confirmBtns = document.querySelectorAll('button');
+        for (const btn of confirmBtns) {
+          const text = (btn as HTMLElement).innerText?.trim().toLowerCase();
+          if (text === 'delete' || text === '删除' || text === 'confirm' || text === '确认' ||
+              text === 'yes' || text === '是' || text === 'ok') {
+            (btn as HTMLElement).click();
+            return true;
+          }
+        }
+        return false;
+      });
+      await this.page.waitForTimeout(1500);
+      log.info(`[${this.provider.name}] 网页对话已删除`);
+      return true;
+    } catch (err) {
+      log.warn(`[${this.provider.name}] 删除网页对话失败:`, err);
+      return false;
+    }
+  }
+
   /** 比较两个 URL 是否指向同一对话（忽略 query / hash / 尾斜杠） */
   private urlMatches(a: string, b: string): boolean {
     try {

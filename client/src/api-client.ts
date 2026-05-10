@@ -136,12 +136,18 @@ export const api = {
 
   conversation: {
     list: (providerId?: string) => get<Conversation[]>(`/api/conversations${providerId ? `?providerId=${providerId}` : ''}`),
-    create: (providerId: string, title: string) => post<Conversation>('/api/conversations', { providerId, title }),
+    create: (providerId: string, title: string, opts?: { agent?: boolean; agentPrompt?: string }) =>
+      post<Conversation>('/api/conversations', { providerId, title, agent: opts?.agent, agentPrompt: opts?.agentPrompt }),
     update: (id: string, data: { title?: string }) => put<void>(`/api/conversations/${id}`, data),
     delete: (id: string) => del(`/api/conversations/${id}`),
     messages: (id: string) => get<Message[]>(`/api/conversations/${id}/messages`),
     setAutoDispatch: (id: string, enabled: boolean) =>
       put<void>(`/api/conversations/${id}/auto-dispatch`, { enabled }),
+    sync: (id: string) => post<{ imported: number }>(`/api/conversations/${id}/sync`),
+    setAgentMode: (id: string, enabled: boolean, systemPrompt?: string) =>
+      put<void>(`/api/conversations/${id}/agent-mode`, { enabled, systemPrompt }),
+    switchProvider: (id: string, providerId: string) =>
+      put<void>(`/api/conversations/${id}/switch-provider`, { providerId }),
   },
 
   provider: {
@@ -151,6 +157,7 @@ export const api = {
     delete: (id: string) => del(`/api/providers/${id}`),
     test: (id: string) => post<{ success: boolean; message: string }>(`/api/providers/${id}/test`),
     login: (id: string) => post<{ success: boolean; message: string }>(`/api/providers/${id}/login`),
+    syncConversations: (id: string) => post<{ imported: number }>(`/api/providers/${id}/sync-conversations`),
   },
 
   role: {

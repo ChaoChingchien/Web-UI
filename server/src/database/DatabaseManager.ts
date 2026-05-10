@@ -248,6 +248,13 @@ export class DatabaseManager {
 
       // ===== 迁移 013: provider 能力元数据（用于多模型编排的档位路由） =====
       `ALTER TABLE providers ADD COLUMN capabilities TEXT DEFAULT '{}';`,
+
+      // ===== 迁移 014: 消息嵌入向量（语义记忆） =====
+      `ALTER TABLE messages ADD COLUMN embedding TEXT;`,
+
+      // ===== 迁移 015: Agent 模式 =====
+      `ALTER TABLE conversations ADD COLUMN agent_mode INTEGER DEFAULT 0;`,
+      `ALTER TABLE conversations ADD COLUMN agent_system_prompt TEXT;`,
     ];
 
     let migrationIndex = 0;

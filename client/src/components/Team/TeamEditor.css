@@ -1,0 +1,372 @@
+/* ===== 内联 Team 编辑器 ===== */
+
+.te-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px 24px;
+  gap: 14px;
+  background: var(--bg-secondary);
+}
+
+.te-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.te-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.te-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.te-form {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.te-form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.te-form-row .form-group {
+  margin: 0;
+}
+
+/* 已选角色条 */
+.te-selected {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.te-selected-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.te-selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.te-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 12px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.te-chip:hover { opacity: 0.8; }
+.te-chip-x { font-weight: 700; margin-left: 2px; }
+
+/* 搜索和分类 */
+.te-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.te-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0 10px;
+}
+
+.te-search:focus-within { border-color: var(--accent); }
+.te-search span { font-size: 14px; opacity: 0.5; }
+
+.te-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  padding: 10px 0;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.te-search-clear {
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 18px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.te-cats {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.te-cat {
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.te-cat:hover {
+  background: var(--bg-sidebar-hover);
+}
+
+.te-cat.active {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+
+.te-cat-count {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* 网格滚动区 */
+.te-grid-scroll {
+  flex: 0 1 auto;
+  min-height: 120px;
+  max-height: 35vh;
+  overflow-y: auto;
+}
+
+/* 角色网格 */
+.te-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 2px;
+}
+
+/* 角色卡片 */
+.te-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-light);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  text-align: center;
+}
+
+.te-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.te-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.te-card-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.te-card-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.te-card-cat {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.55;
+}
+
+.te-card-check {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* 分类色条 */
+.te-card-dev { border-left-color: #3b82f6; }
+.te-card-product { border-left-color: #8b5cf6; }
+.te-card-content { border-left-color: #22c55e; }
+.te-card-business { border-left-color: #f59e0b; }
+.te-card-academic { border-left-color: #06b6d4; }
+.te-card-life { border-left-color: #ec4899; }
+.te-card-tools { border-left-color: #6b7280; }
+.te-card-learn { border-left-color: #84cc16; }
+
+.te-card-cat-dev { color: #3b82f6; }
+.te-card-cat-product { color: #8b5cf6; }
+.te-card-cat-content { color: #22c55e; }
+.te-card-cat-business { color: #f59e0b; }
+.te-card-cat-academic { color: #06b6d4; }
+.te-card-cat-life { color: #ec4899; }
+.te-card-cat-tools { color: #6b7280; }
+.te-card-cat-learn { color: #84cc16; }
+.te-card-cat-custom { color: var(--text-tertiary); }
+
+.te-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+/* 配置区 */
+.te-config {
+  flex: 1 1 auto;
+  min-height: 160px;
+  max-height: 45vh;
+  overflow-y: auto;
+  border-top: 3px solid var(--accent);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.te-config-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.te-config-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.te-config-row + .te-config-row { margin-top: 6px; }
+
+.te-config-role {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 120px;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.te-config-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.te-config-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.te-p-chip {
+  padding: 5px 12px;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--bg-primary);
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.15s;
+}
+
+.te-p-chip:hover { border-color: var(--accent); background: var(--accent-subtle); }
+.te-p-chip.active { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); font-weight: 600; }
+
+.te-mapping {
+  padding: 5px 10px;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  max-width: 200px;
+  outline: none;
+}
+
+.te-mapping:focus { border-color: var(--accent); }
+
+/* ===== 响应式 ===== */
+@media (max-width: 700px) {
+  .te-container { padding: 12px; gap: 10px; }
+  .te-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+  .te-card { padding: 10px 6px; }
+  .te-card-icon { font-size: 26px; }
+  .te-card-name { font-size: 11px; }
+}
+
+@media (min-width: 1200px) {
+  .te-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+}

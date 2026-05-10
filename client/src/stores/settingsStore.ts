@@ -13,9 +13,16 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: {
     theme: 'system',
-    accentColor: 'indigo',
+    accentColor: 'amber',
     sidebarCollapsed: false,
     sidebarWidth: 260,
+    headless: false,
+    embedding: {
+      enabled: false,
+      provider: 'local',
+      apiUrl: 'http://localhost:11434/api',
+      apiModel: 'nomic-embed-text',
+    },
   },
   loading: false,
   error: null,
