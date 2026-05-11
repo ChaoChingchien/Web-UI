@@ -345,7 +345,7 @@ export const Sidebar: React.FC = () => {
       {/* Agent 创建弹窗 */}
       {showAgentDialog && (
         <div className="modal-overlay" onClick={() => setShowAgentDialog(false)}>
-          <div className="modal" style={{ width: 520, maxHeight: '80vh', padding: 24, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}
+          <div className="modal" style={{ width: 560, maxHeight: '85vh', padding: 24, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}
             tabIndex={-1}
             onKeyDown={(e) => { if (e.key === 'Escape') setShowAgentDialog(false); }}
           >
@@ -382,7 +382,7 @@ export const Sidebar: React.FC = () => {
                     onChange={(e) => setAgentRoleSearch(e.target.value)}
                     placeholder="搜索角色..."
                   />
-                  <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
+                  <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
                     {roles
                       .filter((r) => !agentRoleSearch.trim() ||
                         r.name.toLowerCase().includes(agentRoleSearch.trim().toLowerCase()) ||
@@ -391,25 +391,52 @@ export const Sidebar: React.FC = () => {
                         <div
                           key={role.id}
                           className="agent-role-item"
-                          onClick={() => {
-                            setAgentName(role.name);
-                            setAgentPrompt(role.system_prompt || '');
-                            setShowRolePicker(false);
-                            setAgentRoleSearch('');
-                          }}
                           style={{
-                            padding: '6px 10px', cursor: 'pointer', fontSize: 12,
+                            padding: '8px 10px', cursor: 'pointer', fontSize: 12,
                             borderBottom: '1px solid var(--border-light)',
                             display: 'flex', alignItems: 'center', gap: 6,
                             color: 'var(--text-secondary)',
                           }}
-                          title={role.system_prompt?.substring(0, 200)}
                         >
-                          <span>{role.icon}</span>
-                          <span style={{ fontWeight: 500 }}>{role.name}</span>
-                          <span style={{ opacity: 0.5, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {(role.system_prompt || '').substring(0, 60)}
+                          <span
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}
+                            onClick={() => {
+                              setAgentName(role.name);
+                              setAgentPrompt(role.system_prompt || '');
+                              setShowRolePicker(false);
+                              setAgentRoleSearch('');
+                            }}
+                            title={role.system_prompt?.substring(0, 200)}
+                          >
+                            <span>{role.icon}</span>
+                            <span style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{role.name}</span>
+                            <span style={{ opacity: 0.5, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {(role.system_prompt || '').substring(0, 40)}
+                            </span>
                           </span>
+                          <button
+                            className="btn btn-xs btn-primary"
+                            style={{ fontSize: 10, padding: '2px 8px', flexShrink: 0 }}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!activeProviderId) return;
+                              const title = role.name.length > 50 ? role.name.slice(0, 50) + '...' : role.name;
+                              const conv = await createConversation(activeProviderId, title, {
+                                agent: true,
+                                agentPrompt: role.system_prompt || undefined,
+                              });
+                              await setActiveConversation(conv.id);
+                              try { await window.api.conversation.setAgentMode(conv.id, true, role.system_prompt || undefined); } catch { /* */ }
+                              setShowAgentDialog(false);
+                              setShowRolePicker(false);
+                              setAgentName('');
+                              setAgentPrompt('');
+                              setAgentRoleSearch('');
+                              toast('success', `Agent "${role.name}" 已创建`);
+                            }}
+                          >
+                            ⚡ 创建
+                          </button>
                         </div>
                       ))}
                     {roles.filter((r) => !agentRoleSearch.trim() ||
