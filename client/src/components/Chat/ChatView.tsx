@@ -142,8 +142,13 @@ export const ChatView: React.FC = () => {
 
   const handleSend = async () => {
     const trimmed = input.trim();
-    if (!trimmed || !activeProviderId || !activeConversationId || sending) return;
-    const resolved = resolveProviderAndMessage(trimmed, activeProviderId, providers, tier);
+    if (!trimmed || !activeConversationId || sending) return;
+    // Agent 模式：使用对话自己的 provider_id（可能已被切换）
+    const effectiveProviderId = activeConversation?.agent_mode
+      ? activeConversation.provider_id
+      : activeProviderId;
+    if (!effectiveProviderId) return;
+    const resolved = resolveProviderAndMessage(trimmed, effectiveProviderId, providers, tier);
     if (resolved.note) toast('info', resolved.note);
     setInput('');
     await sendMessage(resolved.providerId, activeConversationId, resolved.message, {
@@ -187,12 +192,13 @@ export const ChatView: React.FC = () => {
           {activeConversation?.agent_mode && (
             <select
               className="toolbar-btn"
-              value={activeProviderId || ''}
-              onChange={(e) => {
+              value={activeConversation.provider_id || ''}
+              onChange={async (e) => {
                 const newProviderId = e.target.value;
                 if (newProviderId && activeConversationId) {
-                  window.api.conversation.switchProvider(activeConversationId, newProviderId);
-                  useProviderStore.getState().setActiveProvider(newProviderId);
+                  await window.api.conversation.switchProvider(activeConversationId, newProviderId);
+                  // 更新本地 store（不触发 Sidebar 刷新）
+                  useConversationStore.getState().updateConversation(activeConversationId, { provider_id: newProviderId } as any);
                   toast('info', `已切换到 ${providers.find(p => p.id === newProviderId)?.name || newProviderId}`);
                 }
               }}

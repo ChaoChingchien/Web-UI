@@ -439,3 +439,87 @@
   padding: 0 20px 8px;
   background-color: var(--bg-secondary);
 }
+
+/* === Markdown 渲染 === */
+/* Code block background (fallback if --bg-code not defined) */
+.message-text pre {
+  background: var(--bg-code, #f5f0e8);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.message-text code {
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 12px;
+}
+.message-text :not(pre) > code {
+  background: var(--bg-code, #f5f0e8);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-light);
+}
+.message-text pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.message-text p { margin: 6px 0; }
+.message-text p:first-child { margin-top: 0; }
+.message-text p:last-child { margin-bottom: 0; }
+.message-text strong { font-weight: 700; }
+.message-text em { font-style: italic; }
+.message-text ul, .message-text ol {
+  margin: 6px 0 6px 20px;
+  padding: 0;
+}
+.message-text li { margin: 3px 0; }
+.message-text blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 6px 12px;
+}
+.message-text hr {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 12px 0;
+}
+.message-text a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.message-text h1, .message-text h2, .message-text h3,
+.message-text h4, .message-text h5, .message-text h6 {
+  margin: 12px 0 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.message-text h1 { font-size: 18px; }
+.message-text h2 { font-size: 16px; }
+.message-text h3 { font-size: 15px; }
+.message-text table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+}
+.message-text th, .message-text td {
+  border: 1px solid var(--border-light);
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 13px;
+}
+.message-text th {
+  background: var(--bg-input);
+  font-weight: 600;
+}
+.message-text img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
