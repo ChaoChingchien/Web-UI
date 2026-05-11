@@ -168,7 +168,7 @@ router.post('/api/providers/:id/sync-conversations', async (req: Request, res: R
   try {
     const wa = new WebAutomation();
     const result = await wa.syncAllConversations(provider, provider.id, {
-      ConversationModel,
+      ConversationModel: ConversationModel as any,
       MessageModel: MessageModel as any,
     });
     log.info(`[sync:all] ${provider.id} 导入 ${result.imported} 对话，${result.messages} 消息，清理 ${result.removed} 已删除`);

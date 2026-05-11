@@ -67,7 +67,7 @@ export class WebAutomation {
     provider: AIProvider,
     providerId: string,
     { ConversationModel, MessageModel }: {
-      ConversationModel: { findAll: (pid: string) => Array<{ web_url?: string; id: string }>; create: (pid: string, title: string) => { id: string }; updateWebUrl: (id: string, url: string) => void; delete: (id: string) => void };
+      ConversationModel: { findAll: (pid: string) => Array<{ web_url?: string; id: string; title: string }>; create: (pid: string, title: string) => { id: string }; updateWebUrl: (id: string, url: string) => void; delete: (id: string) => void };
       MessageModel: { findByConversation: (cid: string) => Array<{ content: string }>; create: (cid: string, role: string, content: string) => unknown };
     }
   ): Promise<{ imported: number; messages: number; removed: number }> {
@@ -78,27 +78,42 @@ export class WebAutomation {
     if (webConvs.length === 0) return { imported: 0, messages: 0, removed: 0 };
 
     const localConvs = ConversationModel.findAll(providerId);
-    // 本地 URL 也标准化后去重
-    const localUrls = new Set(localConvs.map((c) => {
-      if (!c.web_url) return null;
-      try { const u = new URL(c.web_url); return u.origin + u.pathname.replace(/\/$/, ''); }
-      catch { return c.web_url; }
-    }).filter(Boolean) as string[]);
+    // 使用 (标准化URL + 标题) 作为去重键，解决 ChatGPT 等所有对话同一 URL 的问题
+    const normalizeUrl = (url: string) => {
+      try {
+        const u = new URL(url);
+        // 去掉 /c/ 前缀（ChatGPT 格式），标准化路径
+        let pathname = u.pathname.replace(/\/c\//, '/').replace(/\/+$/, '');
+        return u.origin + pathname;
+      } catch { return url.replace(/\/+$/, ''); }
+    };
+    const localKeys = new Set<string>();
+    for (const lc of localConvs) {
+      let key: string | null = null;
+      if (lc.web_url) key = normalizeUrl(lc.web_url);
+      if (key) {
+        // 如果多个本地对话有相同 URL，用标题区分
+        const titleSlug = lc.title?.replace(/\s+/g, '_').substring(0, 30) || '';
+        localKeys.add(key + '__' + titleSlug);
+      }
+    }
 
     let imported = 0;
     let totalMessages = 0;
 
     for (const wc of webConvs) {
-      // 标准化 web URL 后比较
-      let normalizedWc: string;
-      try { const u = new URL(wc.url); normalizedWc = u.origin + u.pathname.replace(/\/$/, ''); }
-      catch { normalizedWc = wc.url; }
-      if (localUrls.has(normalizedWc)) continue;
+      const normalizedWc = normalizeUrl(wc.url);
+      const titleSlug = wc.title.replace(/\s+/g, '_').substring(0, 30);
+      const dedupKey = normalizedWc + '__' + titleSlug;
+      if (localKeys.has(dedupKey)) continue;
+      // 也检查纯 URL 匹配（无标题后缀）
+      if (localKeys.has(normalizedWc + '__')) continue;
+
       try {
         const title = wc.title.length > 80 ? wc.title.slice(0, 80) + '...' : wc.title;
         const conv = ConversationModel.create(providerId, title);
         ConversationModel.updateWebUrl(conv.id, wc.url);
-        localUrls.add(wc.url);
+        localKeys.add(dedupKey);
         imported++;
 
         // 同步该对话的消息内容
@@ -142,17 +157,17 @@ export class WebAutomation {
 
     // 清理：网页上已不存在的对话从本地删除
     let removed = 0;
-    const webUrlSet = new Set<string>();
+    const webKeySet = new Set<string>();
     for (const wc of webConvs) {
-      try { webUrlSet.add(new URL(wc.url).origin + new URL(wc.url).pathname.replace(/\/$/, '')); }
-      catch { webUrlSet.add(wc.url); }
+      const norm = normalizeUrl(wc.url);
+      const slug = wc.title.replace(/\s+/g, '_').substring(0, 30);
+      webKeySet.add(norm + '__' + slug);
     }
     for (const lc of localConvs) {
       if (!lc.web_url) continue;
-      let normalized: string;
-      try { normalized = new URL(lc.web_url).origin + new URL(lc.web_url).pathname.replace(/\/$/, ''); }
-      catch { normalized = lc.web_url; }
-      if (!webUrlSet.has(normalized)) {
+      const norm = normalizeUrl(lc.web_url);
+      const slug = (lc.title || '').replace(/\s+/g, '_').substring(0, 30);
+      if (!webKeySet.has(norm + '__' + slug) && !webKeySet.has(norm + '__')) {
         try { ConversationModel.delete(lc.id); removed++; }
         catch { /* skip */ }
       }

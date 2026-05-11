@@ -194,11 +194,12 @@ export class AutomationEngine {
           const href = (link as HTMLAnchorElement).href;
           if (!href.startsWith('http')) continue;
 
-          // URL 标准化：去掉 query 和 hash 做去重
+          // URL 标准化：去掉 query、hash 和 /c/ 前缀，去除尾斜杠
           let normalizedUrl: string;
           try {
             const u = new URL(href);
-            normalizedUrl = u.origin + u.pathname.replace(/\/$/, '');
+            let pathname = u.pathname.replace(/\/c\//, '/').replace(/\/+$/, '');
+            normalizedUrl = u.origin + pathname;
           } catch { normalizedUrl = href; }
 
           if (!seen.has(normalizedUrl)) {
