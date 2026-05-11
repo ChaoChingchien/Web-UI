@@ -163,7 +163,7 @@ router.post('/api/providers/:id/sync-conversations', async (req: Request, res: R
       ConversationModel,
       MessageModel: MessageModel as any,
     });
-    log.info(`[sync:all] ${provider.id} 导入了 ${result.imported} 个对话，${result.messages} 条消息`);
+    log.info(`[sync:all] ${provider.id} 导入 ${result.imported} 对话，${result.messages} 消息，清理 ${result.removed} 已删除`);
     res.json(result);
   } catch (err) {
     log.error('[sync:all] 同步对话列表失败:', err);

@@ -61,12 +61,31 @@ export const Sidebar: React.FC = () => {
   // 重命名弹窗
   const [renameDialog, setRenameDialog] = useState<{ id: string; title: string } | null>(null);
   const [renameTitle, setRenameTitle] = useState('');
+  const [showAgentDialog, setShowAgentDialog] = useState(false);
+  const [agentName, setAgentName] = useState('');
+  const [agentPrompt, setAgentPrompt] = useState('');
 
   const handleNewConversation = async () => {
     if (!activeProviderId) return;
     // 直接创建，不弹对话框 —— 标题留空，首次回复后自动命名
     const conv = await createConversation(activeProviderId, '新对话');
     await setActiveConversation(conv.id);
+  };
+
+  const handleNewAgent = async () => {
+    if (!activeProviderId || !agentName.trim()) return;
+    const title = agentName.trim().length > 50 ? agentName.trim().slice(0, 50) + '...' : agentName.trim();
+    const conv = await createConversation(activeProviderId, title, {
+      agent: true,
+      agentPrompt: agentPrompt.trim() || undefined,
+    });
+    await setActiveConversation(conv.id);
+    // 同步启用 agent_mode
+    try { await window.api.conversation.setAgentMode(conv.id, true, agentPrompt.trim() || undefined); } catch { /* */ }
+    setShowAgentDialog(false);
+    setAgentName('');
+    setAgentPrompt('');
+    toast('success', 'Agent 已创建');
   };
 
   const handleConversationClick = async (convId: string) => {
@@ -166,7 +185,10 @@ export const Sidebar: React.FC = () => {
                   e.stopPropagation();
                   try {
                     const r = await window.api.provider.syncConversations(provider.id);
-                    toast('success', `已导入 ${r.imported} 个对话`);
+                    const parts = [`导入 ${r.imported} 对话`];
+                    if ((r as any).messages) parts.push(`${(r as any).messages} 条消息`);
+                    if ((r as any).removed) parts.push(`清理 ${(r as any).removed} 已删除`);
+                    toast('success', parts.join('，'));
                     loadConversations(provider.id);
                   } catch { toast('error', '同步失败'); }
                 }}
@@ -184,6 +206,7 @@ export const Sidebar: React.FC = () => {
           <div className="section-title">对话</div>
           <div style={{ display: 'flex', gap: 4 }}>
             <button className="btn-new" onClick={toggleSelectAll} title="全选">☐</button>
+            <button className="btn-new" onClick={() => { setShowAgentDialog(true); setAgentName(''); setAgentPrompt(''); }} title="新建 Agent">🤖</button>
             <button className="btn-new" onClick={handleNewConversation} title="新建对话">+</button>
           </div>
         </div>
@@ -307,6 +330,47 @@ export const Sidebar: React.FC = () => {
             <div className="form-actions">
               <button className="btn-cancel" onClick={() => setRenameDialog(null)}>取消</button>
               <button className="btn-confirm" onClick={confirmRename}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Agent 创建弹窗 */}
+      {showAgentDialog && (
+        <div className="modal-overlay" onClick={() => setShowAgentDialog(false)}>
+          <div className="modal" style={{ width: 400, padding: 24 }} onClick={(e) => e.stopPropagation()}
+            tabIndex={-1}
+            onKeyDown={(e) => { if (e.key === 'Escape') setShowAgentDialog(false); }}
+          >
+            <h3>创建 Agent</h3>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label>Agent 名称</label>
+              <input
+                className="input"
+                autoFocus
+                value={agentName}
+                onChange={(e) => setAgentName(e.target.value)}
+                placeholder="如：代码审查助手"
+                onKeyDown={(e) => { if (e.key === 'Enter' && agentName.trim()) handleNewAgent(); }}
+              />
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label>系统提示词（可选）</label>
+              <textarea
+                className="input"
+                rows={5}
+                value={agentPrompt}
+                onChange={(e) => setAgentPrompt(e.target.value)}
+                placeholder="定义 Agent 的身份和行为，如：你是一个经验丰富的代码审查专家..."
+                style={{ resize: 'vertical', minHeight: 80, fontFamily: 'inherit' }}
+              />
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
+              Agent 模式下可在对话中随时切换 AI 提供商，所有上下文自动桥接。
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+              <button className="btn" onClick={() => setShowAgentDialog(false)}>取消</button>
+              <button className="btn btn-primary" onClick={handleNewAgent} disabled={!agentName.trim()}>创建</button>
             </div>
           </div>
         </div>

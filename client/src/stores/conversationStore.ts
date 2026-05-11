@@ -28,7 +28,7 @@ interface ConversationState {
   // Actions
   loadConversations: (providerId?: string) => Promise<void>;
   setActiveConversation: (id: string | null) => Promise<void>;
-  createConversation: (providerId: string, title: string) => Promise<Conversation>;
+  createConversation: (providerId: string, title: string, opts?: { agent?: boolean; agentPrompt?: string }) => Promise<Conversation>;
   renameConversation: (id: string, title: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
   sendMessage: (providerId: string, conversationId: string, content: string, options?: { mode?: string; model?: string; toggles?: Record<string, boolean> }) => Promise<void>;
@@ -91,8 +91,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     }
   },
 
-  createConversation: async (providerId, title) => {
-    const conv = await window.api.conversation.create(providerId, title);
+  createConversation: async (providerId, title, opts) => {
+    const conv = await window.api.conversation.create(providerId, title, opts);
     await get().loadConversations(providerId);
     return conv;
   },

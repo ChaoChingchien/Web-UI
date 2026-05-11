@@ -62,15 +62,15 @@ export class WebAutomation {
     provider: AIProvider,
     providerId: string,
     { ConversationModel, MessageModel }: {
-      ConversationModel: { findAll: (pid: string) => Array<{ web_url?: string; id: string }>; create: (pid: string, title: string) => { id: string }; updateWebUrl: (id: string, url: string) => void };
+      ConversationModel: { findAll: (pid: string) => Array<{ web_url?: string; id: string }>; create: (pid: string, title: string) => { id: string }; updateWebUrl: (id: string, url: string) => void; delete: (id: string) => void };
       MessageModel: { findByConversation: (cid: string) => Array<{ content: string }>; create: (cid: string, role: string, content: string) => unknown };
     }
-  ): Promise<{ imported: number; messages: number }> {
+  ): Promise<{ imported: number; messages: number; removed: number }> {
     const browserManager = BrowserManager.getInstance();
     const page = await browserManager.getPage(provider);
     const engine = new AutomationEngine(page, provider);
     const webConvs = await engine.scrapeConversationList();
-    if (webConvs.length === 0) return { imported: 0, messages: 0 };
+    if (webConvs.length === 0) return { imported: 0, messages: 0, removed: 0 };
 
     const localConvs = ConversationModel.findAll(providerId);
     // 本地 URL 也标准化后去重
@@ -135,7 +135,25 @@ export class WebAutomation {
       } catch { /* skip */ }
     }
 
-    return { imported, messages: totalMessages };
+    // 清理：网页上已不存在的对话从本地删除
+    let removed = 0;
+    const webUrlSet = new Set<string>();
+    for (const wc of webConvs) {
+      try { webUrlSet.add(new URL(wc.url).origin + new URL(wc.url).pathname.replace(/\/$/, '')); }
+      catch { webUrlSet.add(wc.url); }
+    }
+    for (const lc of localConvs) {
+      if (!lc.web_url) continue;
+      let normalized: string;
+      try { normalized = new URL(lc.web_url).origin + new URL(lc.web_url).pathname.replace(/\/$/, ''); }
+      catch { normalized = lc.web_url; }
+      if (!webUrlSet.has(normalized)) {
+        try { ConversationModel.delete(lc.id); removed++; }
+        catch { /* skip */ }
+      }
+    }
+
+    return { imported, messages: totalMessages, removed };
   }
 
   /** 多轮对话：取最后一条用户消息发送 */
