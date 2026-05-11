@@ -377,7 +377,7 @@ export const Sidebar: React.FC = () => {
                 <div style={{ marginTop: 6 }}>
                   <input
                     className="input"
-                    style={{ marginBottom: 6 }}
+                    style={{ marginBottom: 6, width: '100%' }}
                     value={agentRoleSearch}
                     onChange={(e) => setAgentRoleSearch(e.target.value)}
                     placeholder="搜索角色..."
@@ -415,8 +415,15 @@ export const Sidebar: React.FC = () => {
                             </span>
                           </span>
                           <button
-                            className="btn btn-xs btn-primary"
-                            style={{ fontSize: 10, padding: '2px 8px', flexShrink: 0 }}
+                            className="agent-create-btn"
+                            style={{
+                              fontSize: 11, fontWeight: 600, padding: '4px 12px', flexShrink: 0,
+                              border: '1px solid var(--accent)', borderRadius: 'var(--radius-sm)',
+                              background: 'var(--accent)', color: 'var(--text-on-accent)',
+                              cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s',
+                            }}
+                            onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'var(--accent-hover)'; }}
+                            onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'var(--accent)'; }}
                             onClick={async (e) => {
                               e.stopPropagation();
                               if (!activeProviderId) return;
