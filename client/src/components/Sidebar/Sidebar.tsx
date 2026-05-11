@@ -7,7 +7,7 @@ import './Sidebar.css';
 
 export const Sidebar: React.FC = () => {
   const { providers, activeProviderId, loadProviders, setActiveProvider } = useProviderStore();
-  const { conversations, activeConversationId, loadConversations, setActiveConversation, createConversation, deleteConversation, renameConversation } =
+  const { conversations, activeConversationId, loadConversations, setActiveConversation, createConversation, deleteConversation, renameConversation, roles, loadRoles, rolesLoaded } =
     useConversationStore();
 
   useEffect(() => {
@@ -64,6 +64,13 @@ export const Sidebar: React.FC = () => {
   const [showAgentDialog, setShowAgentDialog] = useState(false);
   const [agentName, setAgentName] = useState('');
   const [agentPrompt, setAgentPrompt] = useState('');
+  const [agentRoleSearch, setAgentRoleSearch] = useState('');
+  const [showRolePicker, setShowRolePicker] = useState(false);
+
+  // Ensure roles are loaded when agent dialog opens
+  useEffect(() => {
+    if (showAgentDialog && !rolesLoaded) loadRoles();
+  }, [showAgentDialog, rolesLoaded, loadRoles]);
 
   const handleNewConversation = async () => {
     if (!activeProviderId) return;
@@ -338,7 +345,7 @@ export const Sidebar: React.FC = () => {
       {/* Agent 创建弹窗 */}
       {showAgentDialog && (
         <div className="modal-overlay" onClick={() => setShowAgentDialog(false)}>
-          <div className="modal" style={{ width: 400, padding: 24 }} onClick={(e) => e.stopPropagation()}
+          <div className="modal" style={{ width: 520, maxHeight: '80vh', padding: 24, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}
             tabIndex={-1}
             onKeyDown={(e) => { if (e.key === 'Escape') setShowAgentDialog(false); }}
           >
@@ -354,8 +361,70 @@ export const Sidebar: React.FC = () => {
                 onKeyDown={(e) => { if (e.key === 'Enter' && agentName.trim()) handleNewAgent(); }}
               />
             </div>
+            {/* 角色库快速选择 */}
             <div className="form-group" style={{ marginTop: 12 }}>
-              <label>系统提示词（可选）</label>
+              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>或从角色库选择</span>
+                <button
+                  className="btn btn-xs"
+                  style={{ fontSize: 11 }}
+                  onClick={() => setShowRolePicker(!showRolePicker)}
+                >
+                  {showRolePicker ? '收起 ▲' : '展开 ▼'} ({roles.length} 个角色)
+                </button>
+              </label>
+              {showRolePicker && (
+                <div style={{ marginTop: 6 }}>
+                  <input
+                    className="input"
+                    style={{ marginBottom: 6 }}
+                    value={agentRoleSearch}
+                    onChange={(e) => setAgentRoleSearch(e.target.value)}
+                    placeholder="搜索角色..."
+                  />
+                  <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
+                    {roles
+                      .filter((r) => !agentRoleSearch.trim() ||
+                        r.name.toLowerCase().includes(agentRoleSearch.trim().toLowerCase()) ||
+                        (r.system_prompt || '').toLowerCase().includes(agentRoleSearch.trim().toLowerCase()))
+                      .map((role) => (
+                        <div
+                          key={role.id}
+                          className="agent-role-item"
+                          onClick={() => {
+                            setAgentName(role.name);
+                            setAgentPrompt(role.system_prompt || '');
+                            setShowRolePicker(false);
+                            setAgentRoleSearch('');
+                          }}
+                          style={{
+                            padding: '6px 10px', cursor: 'pointer', fontSize: 12,
+                            borderBottom: '1px solid var(--border-light)',
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            color: 'var(--text-secondary)',
+                          }}
+                          title={role.system_prompt?.substring(0, 200)}
+                        >
+                          <span>{role.icon}</span>
+                          <span style={{ fontWeight: 500 }}>{role.name}</span>
+                          <span style={{ opacity: 0.5, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {(role.system_prompt || '').substring(0, 60)}
+                          </span>
+                        </div>
+                      ))}
+                    {roles.filter((r) => !agentRoleSearch.trim() ||
+                      r.name.toLowerCase().includes(agentRoleSearch.trim().toLowerCase()) ||
+                      (r.system_prompt || '').toLowerCase().includes(agentRoleSearch.trim().toLowerCase())).length === 0 && (
+                      <div style={{ padding: 8, fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+                        {roles.length === 0 ? '角色库为空' : '无匹配角色'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label>系统提示词（可编辑）</label>
               <textarea
                 className="input"
                 rows={5}
