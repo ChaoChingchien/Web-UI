@@ -69,6 +69,14 @@ router.delete('/api/conversations/:id', async (req: Request, res: Response) => {
     }
   }
 
+  // 关闭对应的浏览器对话页面
+  if (conversation.provider_id) {
+    try {
+      const { BrowserManager } = await import('../browser/BrowserManager');
+      await BrowserManager.getInstance().closePageForConversation(conversation.provider_id, req.params.id);
+    } catch { /* ignore */ }
+  }
+
   ConversationModel.delete(req.params.id);
   res.json({ success: true, webDeleted });
 });
@@ -169,6 +177,12 @@ router.post('/api/providers/:id/sync-conversations', async (req: Request, res: R
     log.error('[sync:all] 同步对话列表失败:', err);
     res.status(500).json({ error: (err as Error).message });
   }
+});
+
+// GET /api/conversations/agents — 获取所有 Agent 对话
+router.get('/api/conversations/agents', (_req: Request, res: Response) => {
+  const agents = ConversationModel.findAgents();
+  res.json(agents);
 });
 
 export default router;

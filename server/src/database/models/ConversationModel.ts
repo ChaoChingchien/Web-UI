@@ -113,6 +113,18 @@ export class ConversationModel {
     };
   }
 
+  /** 查询所有 Agent 对话 */
+  static findAgents(): Conversation[] {
+    const db = DatabaseManager.getInstance().getDb();
+    const stmt = db.prepare('SELECT * FROM conversations WHERE agent_mode = 1 ORDER BY updated_at DESC');
+    const results: Conversation[] = [];
+    while (stmt.step()) {
+      results.push(this.rowToConversation(stmt.getAsObject()));
+    }
+    stmt.free();
+    return results;
+  }
+
   /** 切换 Agent 模式下的 provider */
   static switchProvider(id: string, newProviderId: string): void {
     const db = DatabaseManager.getInstance().getDb();

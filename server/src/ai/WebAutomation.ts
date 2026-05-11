@@ -18,9 +18,14 @@ export interface ChatOptions {
 
 export class WebAutomation {
   /** 发送消息，返回回复内容及最终的网页对话 URL */
-  async chat(provider: AIProvider, message: string, options?: ChatOptions): Promise<{ response: string; finalUrl: string }> {
+  async chat(provider: AIProvider, message: string, options?: ChatOptions & { conversationId?: string }): Promise<{ response: string; finalUrl: string }> {
     const browserManager = BrowserManager.getInstance();
-    const page = await browserManager.getPage(provider);
+    let page: import('playwright-core').Page;
+    if (options?.conversationId && provider.type === 'web') {
+      page = await browserManager.getPageForConversation(provider, options.conversationId, options.resumeUrl);
+    } else {
+      page = await browserManager.getPage(provider);
+    }
     const engine = new AutomationEngine(page, provider);
     return engine.execute(message, {
       mode: options?.mode,
