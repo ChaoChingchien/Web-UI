@@ -179,6 +179,13 @@ router.post('/api/providers/:id/sync-conversations', async (req: Request, res: R
   }
 });
 
+// PUT /api/conversations/:id/system-prompt — 设置对话系统提示词
+router.put('/api/conversations/:id/system-prompt', (req: Request, res: Response) => {
+  const { systemPrompt } = req.body;
+  ConversationModel.setSystemPrompt(req.params.id, systemPrompt ?? null);
+  res.json({ success: true });
+});
+
 // GET /api/conversations/agents — 获取所有 Agent 对话
 router.get('/api/conversations/agents', (_req: Request, res: Response) => {
   const agents = ConversationModel.findAgents();

@@ -91,6 +91,7 @@ export class ConversationModel {
 
   private static rowToConversation(row: Record<string, unknown>): Conversation {
     const webUrl = row.web_url;
+    const systemPromptRaw = row.system_prompt;
     const autoDispatchRaw = row.auto_dispatch;
     const agentModeRaw = row.agent_mode;
     const agentPromptRaw = row.agent_system_prompt;
@@ -98,6 +99,7 @@ export class ConversationModel {
       id: row.id as string,
       provider_id: row.provider_id as string,
       title: row.title as string,
+      system_prompt: (systemPromptRaw === null || systemPromptRaw === undefined) ? undefined : String(systemPromptRaw),
       web_url: (webUrl === null || webUrl === undefined) ? undefined : String(webUrl),
       auto_dispatch: autoDispatchRaw === null || autoDispatchRaw === undefined
         ? false
@@ -129,6 +131,13 @@ export class ConversationModel {
   static switchProvider(id: string, newProviderId: string): void {
     const db = DatabaseManager.getInstance().getDb();
     db.run("UPDATE conversations SET provider_id = ?, updated_at = datetime('now') WHERE id = ?", [newProviderId, id]);
+    DatabaseManager.getInstance().save();
+  }
+
+  /** 设置对话系统提示词 */
+  static setSystemPrompt(id: string, prompt: string | null): void {
+    const db = DatabaseManager.getInstance().getDb();
+    db.run("UPDATE conversations SET system_prompt = ?, updated_at = datetime('now') WHERE id = ?", [prompt, id]);
     DatabaseManager.getInstance().save();
   }
 

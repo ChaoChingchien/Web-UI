@@ -106,6 +106,8 @@ export interface Conversation {
   id: string;
   provider_id: string;
   title: string;
+  /** 对话级系统提示词（每次发送消息时自动注入） */
+  system_prompt?: string | null;
   /** 对应网页端真实对话的 URL（仅 web 自动化 provider 在首次发送后写入） */
   web_url?: string;
   /** 是否开启消息级自动角色调度（由分类器挑选角色） */

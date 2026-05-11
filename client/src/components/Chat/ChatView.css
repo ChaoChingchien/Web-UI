@@ -409,6 +409,29 @@
 }
 
 /* 输入框下方的提示文字 */
+/* System Prompt Bar */
+.system-prompt-bar {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-input);
+}
+.system-prompt-display {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 12px; color: var(--text-tertiary);
+}
+.system-prompt-display:hover { background: var(--bg-hover); }
+.system-prompt-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }
+.system-prompt-placeholder { opacity: 0.6; }
+.system-prompt-edit { display: flex; flex-direction: column; gap: 6px; }
+.system-prompt-input {
+  width: 100%; padding: 8px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg);
+  color: var(--text-primary); font-size: 12px; font-family: inherit;
+  resize: vertical; min-height: 60px;
+}
+.system-prompt-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
 .chat-input-hint {
   font-size: 11px;
   color: var(--text-tertiary);

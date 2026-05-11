@@ -91,6 +91,11 @@ export const ChatView: React.FC = () => {
     return states;
   });
 
+  // System prompt editing
+  const [editingPrompt, setEditingPrompt] = useState(false);
+  const [promptDraft, setPromptDraft] = useState('');
+  const systemPrompt = activeConversation?.system_prompt;
+
   useEffect(() => {
     setCurrentMode(modeCfg?.defaultMode || '');
     setCurrentModel(modelCfg?.defaultModel || '');
@@ -214,6 +219,60 @@ export const ChatView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* System Prompt */}
+      {activeConversation && (
+        <div className="system-prompt-bar">
+          {editingPrompt ? (
+            <div className="system-prompt-edit">
+              <textarea
+                className="system-prompt-input"
+                value={promptDraft}
+                onChange={(e) => setPromptDraft(e.target.value)}
+                placeholder="设置对话的系统提示词（如：你是一个 Python 专家，只回答 Python 相关问题）"
+                rows={3}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setEditingPrompt(false);
+                    setPromptDraft(systemPrompt || '');
+                  }
+                }}
+              />
+              <div className="system-prompt-actions">
+                <button className="btn btn-sm" onClick={() => {
+                  setEditingPrompt(false);
+                  setPromptDraft(systemPrompt || '');
+                }}>取消</button>
+                <button className="btn btn-sm btn-primary" onClick={async () => {
+                  const text = promptDraft.trim();
+                  try {
+                    await window.api.conversation.setSystemPrompt(activeConversation.id, text || null);
+                    useConversationStore.getState().updateConversation(activeConversation.id, { system_prompt: text || null } as any);
+                    setEditingPrompt(false);
+                    toast('success', text ? '提示词已保存' : '提示词已清除');
+                  } catch { toast('error', '保存失败'); }
+                }}>保存</button>
+              </div>
+            </div>
+          ) : (
+            <div className="system-prompt-display" onClick={() => {
+              setPromptDraft(systemPrompt || '');
+              setEditingPrompt(true);
+            }}>
+              {systemPrompt ? (
+                <>
+                  <span className="system-prompt-icon">💬</span>
+                  <span className="system-prompt-text">{systemPrompt.substring(0, 80)}{systemPrompt.length > 80 ? '...' : ''}</span>
+                  <button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); if (confirm('清除提示词？')) window.api.conversation.setSystemPrompt(activeConversation.id, null).then(() => useConversationStore.getState().updateConversation(activeConversation.id, { system_prompt: null } as any)); }}>✕</button>
+                </>
+              ) : (
+                <span className="system-prompt-placeholder">💬 点击设置系统提示词...</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <ChatToolbar
         modeCfg={modeCfg}

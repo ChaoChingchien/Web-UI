@@ -146,6 +146,8 @@ export const api = {
     sync: (id: string) => post<{ imported: number }>(`/api/conversations/${id}/sync`),
     setAgentMode: (id: string, enabled: boolean, systemPrompt?: string) =>
       put<void>(`/api/conversations/${id}/agent-mode`, { enabled, systemPrompt }),
+    setSystemPrompt: (id: string, systemPrompt: string | null) =>
+      put<void>(`/api/conversations/${id}/system-prompt`, { systemPrompt }),
     switchProvider: (id: string, providerId: string) =>
       put<void>(`/api/conversations/${id}/switch-provider`, { providerId }),
   },

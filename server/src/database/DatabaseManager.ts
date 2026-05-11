@@ -255,6 +255,9 @@ export class DatabaseManager {
       // ===== 迁移 015: Agent 模式 =====
       `ALTER TABLE conversations ADD COLUMN agent_mode INTEGER DEFAULT 0;`,
       `ALTER TABLE conversations ADD COLUMN agent_system_prompt TEXT;`,
+
+      // ===== 迁移 016: 对话级系统提示词 =====
+      `ALTER TABLE conversations ADD COLUMN system_prompt TEXT;`,
     ];
 
     let migrationIndex = 0;

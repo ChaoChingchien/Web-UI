@@ -112,10 +112,14 @@ async function handleChatSend(ws: WebSocket, data: { providerId: string; convers
       content: m.content,
     }));
 
-    // Agent 模式：注入 agent 系统提示词
+    // Agent 模式：注入 agent 系统提示词（覆盖自动调度提示词）
     let systemPrompt = effectiveSystemPrompt;
     if (conversation.agent_mode && conversation.agent_system_prompt) {
       systemPrompt = conversation.agent_system_prompt;
+    }
+    // 对话级 system_prompt（优先级低于 agent，覆盖自动调度）
+    if (!systemPrompt && conversation.system_prompt) {
+      systemPrompt = conversation.system_prompt;
     }
 
     const messages = systemPrompt

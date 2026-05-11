@@ -37,6 +37,7 @@ interface ConversationState {
   setStreamingContent: (content: string) => void;
   clearError: () => void;
   setAutoDispatch: (conversationId: string, enabled: boolean) => Promise<void>;
+  updateConversation: (id: string, data: Partial<Conversation>) => void;
   loadRoles: () => Promise<void>;
 }
 
@@ -223,6 +224,14 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     set((state) => ({
       conversations: state.conversations.map((c) =>
         c.id === conversationId ? { ...c, auto_dispatch: enabled } : c
+      ),
+    }));
+  },
+
+  updateConversation: (id, data) => {
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === id ? { ...c, ...data } : c
       ),
     }));
   },
